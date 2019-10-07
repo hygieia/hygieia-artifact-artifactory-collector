@@ -1,5 +1,6 @@
 package com.capitalone.dashboard.collector;
 
+import com.capitalone.dashboard.client.RestClient;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
 import com.capitalone.dashboard.model.BinaryArtifact;
@@ -58,7 +59,7 @@ public class DefaultArtifactoryClientTest {
 		r.setPatterns(Arrays.asList(ArtifactUtilTest.IVY_PATTERN1, ArtifactUtilTest.IVY_ARTIFACT_PATTERN1, ArtifactUtilTest.MAVEN_PATTERN1,ArtifactUtilTest.ARTIFACT_PATTERN));
 		serverSetting.setRepoAndPatterns(Collections.singletonList(r));
         settings.setServers(Collections.singletonList(serverSetting));
-        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, restOperationsSupplier,binaryArtifactRepository);
+        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier),binaryArtifactRepository);
     }
     
     @Test
