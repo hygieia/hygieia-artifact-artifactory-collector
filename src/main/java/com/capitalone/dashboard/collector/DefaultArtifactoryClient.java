@@ -1,5 +1,6 @@
 package com.capitalone.dashboard.collector;
 
+import com.capitalone.dashboard.client.RestClient;
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
@@ -50,16 +51,16 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	private final DateFormat FULL_DATE = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX");
 
 	private final ArtifactorySettings artifactorySettings;
-	private final RestOperations restOperations;
+	private final RestClient restClient;
 
 	private final List<Pattern> artifactPatterns;
 
 	private final BinaryArtifactRepository binaryArtifactRepository;
 
 	@Autowired
-	public DefaultArtifactoryClient(ArtifactorySettings artifactorySettings, Supplier<RestOperations> restOperationsSupplier,BinaryArtifactRepository binaryArtifactRepository) {
+	public DefaultArtifactoryClient(ArtifactorySettings artifactorySettings, RestClient restClient, BinaryArtifactRepository binaryArtifactRepository) {
 		this.artifactorySettings = artifactorySettings;
-		this.restOperations = restOperationsSupplier.get();
+		this.restClient = restClient;
 		this.binaryArtifactRepository = binaryArtifactRepository;
 		this.artifactPatterns = new ArrayList<>();
 
@@ -502,28 +503,29 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 
 	private ResponseEntity<String> makeRestCall(String instanceUrl, String suffix) {
 		ResponseEntity<String> response = null;
+		String url = joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix);
 		try {
-			response = restOperations.exchange(joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix), HttpMethod.GET,
-					new HttpEntity<>(createHeaders(instanceUrl)), String.class);
+			HttpHeaders headers = createHeaders(instanceUrl);
+			response = restClient.makeRestCallGet(url, headers);
 
 		} catch (RestClientException re) {
-			LOGGER.error("Error with REST url: " + joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix));
+			LOGGER.error("Error with REST url: " + url);
 			LOGGER.error(re.getMessage());
 		}
 		return response;
 	}
 
-	private ResponseEntity<String> makeRestPost(String instanceUrl, String suffix, MediaType contentType, Object body) {
+	private ResponseEntity<String> makeRestPost(String instanceUrl, String suffix, MediaType contentType, String body) {
 		ResponseEntity<String> response = null;
+		String url = joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix);
 		try {
 			HttpHeaders headers = createHeaders(instanceUrl);
 			headers.setContentType(contentType);
 			headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-			response = restOperations.exchange(joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix), HttpMethod.POST,
-					new HttpEntity<>(body, headers), String.class);
+			response = restClient.makeRestCallPost(url, headers, body);
 
 		} catch (RestClientException re) {
-			LOGGER.error("Error with REST url: " + joinUrl(instanceUrl, artifactorySettings.getEndpoint(), suffix));
+			LOGGER.error("Error with REST url: " + url);
 			LOGGER.error(re.getMessage());
 		}
 		return response;
