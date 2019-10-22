@@ -10,8 +10,10 @@ import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtilTest;
 import com.capitalone.dashboard.util.Supplier;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.bson.types.ObjectId;
+import org.json.simple.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,9 +30,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
@@ -166,6 +167,75 @@ public class DefaultArtifactoryClientTest {
 
 
 
+	@Test
+	public void testGetArtifactItemsWithPaging() throws Exception {
+    	String instanceUrl = "http://localhost:8081/artifactory/";
+		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
+		String repoName = "release";
+
+		long currentTime = 1571758036031L;
+		// mock query json in response
+		String artifactItemsJson1 = queryJsonByTime("pagedArtifactItems.json",
+				currentTime - TimeUnit.DAYS.toMillis(2),
+				currentTime - TimeUnit.DAYS.toMillis(1));
+		String artifactItemsJson2 = queryJsonByTime("pagedArtifactItems.json",
+				currentTime - TimeUnit.DAYS.toMillis(1),
+				currentTime);
+		// additional call from slight offset in milliseconds
+		String artifactItemsJson3 = queryJsonByTime("pagedArtifactItems.json",
+				currentTime,
+				currentTime);
+
+		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson1, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson2, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson3, HttpStatus.OK));
+		when(binaryArtifactRepository.findByArtifactNameAndArtifactVersion("test-dev","1"))
+				.thenReturn(binaryArtifactIterable(false));
+
+		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,currentTime - (TimeUnit.DAYS.toMillis(2)));
+		assertThat(baseArtifacts.size(), is(2));
+
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().size(), is(1));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getArtifactName(),is("test-dev"));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getInstanceUrl(),is("http://localhost:8081/artifactory/"));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getRepoName(),is("testing1"));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getPath(),is("dummy/test-dev"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCanonicalName(),is("manifest.json"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactGroupId(),is("dummy"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f2"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f2"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactExtension(),is("json"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactName(),is("test-dev"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getType(),is("file"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedBy(),is("robot"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedTimeStamp(),is(new Long("1571582336471")));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedBy(),is("robot"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(new Long("1571581636031")));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactVersion(),is("1"));
+		assertNotNull(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCollectorItemId());
+
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().size(), is(1));
+		assertThat(baseArtifacts.get(1).getArtifactItem().getArtifactName(),is("test-dev"));
+		assertThat(baseArtifacts.get(1).getArtifactItem().getInstanceUrl(),is("http://localhost:8081/artifactory/"));
+		assertThat(baseArtifacts.get(1).getArtifactItem().getRepoName(),is("testing2"));
+		assertThat(baseArtifacts.get(1).getArtifactItem().getPath(),is("dummy/test-dev"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getCanonicalName(),is("manifest.json"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getArtifactGroupId(),is("dummy"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f4"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f4"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getArtifactExtension(),is("json"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getArtifactName(),is("test-dev"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getType(),is("file"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getModifiedBy(),is("robot"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getModifiedTimeStamp(),is(new Long("1571683136471")));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getCreatedBy(),is("robot"));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(new Long("1571682436031")));
+		assertThat(baseArtifacts.get(1).getBinaryArtifacts().get(0).getArtifactVersion(),is("1"));
+		assertNotNull(baseArtifacts.get(1).getBinaryArtifacts().get(0).getCollectorItemId());
+
+	}
+
 
 	@Test
     public void testGetMavenArtifacts() throws Exception {
@@ -233,6 +303,32 @@ public class DefaultArtifactoryClientTest {
         InputStream inputStream = DefaultArtifactoryClient.class.getResourceAsStream(fileName);
         return IOUtils.toString(inputStream);
     }
+
+    // Artifactory pagination helper: returns queried json string based on time interval
+	private String queryJsonByTime(String fileName, long createdGT, long createdLTE) throws IOException {
+		InputStream inputStream = DefaultArtifactoryClient.class.getResourceAsStream(fileName);
+		String jstr = IOUtils.toString(inputStream);
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+		ObjectMapper mapper = new ObjectMapper();
+		Map jsonMap = mapper.readValue(jstr, Map.class);
+		List<Map<String, String>> results = (List) jsonMap.get("results");
+		List<Map<String, String>> queriedResults = new ArrayList<>();
+		for (Map<String, String> j : results) {
+			try {
+				Date d = formatter.parse(j.get("created"));
+				if (d.getTime() > createdGT && d.getTime() <= createdLTE) {
+					queriedResults.add(j);
+				}
+			} catch (java.text.ParseException e) {
+				e.printStackTrace();
+			}
+		}
+
+		JSONObject response = new JSONObject();
+		response.put("results", queriedResults);
+		response.put("range", jsonMap.get("range"));
+		return response.toJSONString();
+	}
 
     private Iterable<BinaryArtifact> binaryArtifactIterable(boolean buildInfo){
     	BinaryArtifact b = new BinaryArtifact();
