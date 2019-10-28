@@ -173,18 +173,18 @@ public class DefaultArtifactoryClientTest {
 		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
 		String repoName = "release";
 
-		long currentTime = 1571758036031L;
+		long lastUpdated = 1571551227000L;
 		// mock query json in response
 		String artifactItemsJson1 = queryJsonByTime("pagedArtifactItems.json",
-				currentTime - TimeUnit.DAYS.toMillis(2),
-				currentTime - TimeUnit.DAYS.toMillis(1));
+				lastUpdated,
+				lastUpdated + TimeUnit.DAYS.toMillis(1));
 		String artifactItemsJson2 = queryJsonByTime("pagedArtifactItems.json",
-				currentTime - TimeUnit.DAYS.toMillis(1),
-				currentTime);
+				lastUpdated + TimeUnit.DAYS.toMillis(1),
+				lastUpdated + TimeUnit.DAYS.toMillis(2));
 		// additional call from slight offset in milliseconds
 		String artifactItemsJson3 = queryJsonByTime("pagedArtifactItems.json",
-				currentTime,
-				currentTime);
+				lastUpdated + TimeUnit.DAYS.toMillis(2),
+				System.currentTimeMillis());
 
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(artifactItemsJson1, HttpStatus.OK))
@@ -193,7 +193,7 @@ public class DefaultArtifactoryClientTest {
 		when(binaryArtifactRepository.findByArtifactNameAndArtifactVersion("test-dev","1"))
 				.thenReturn(binaryArtifactIterable(false));
 
-		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,currentTime - (TimeUnit.DAYS.toMillis(2)));
+		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,lastUpdated - (TimeUnit.DAYS.toMillis(2)));
 		assertThat(baseArtifacts.size(), is(2));
 
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().size(), is(1));
@@ -308,14 +308,14 @@ public class DefaultArtifactoryClientTest {
 	private String queryJsonByTime(String fileName, long createdGT, long createdLTE) throws IOException {
 		InputStream inputStream = DefaultArtifactoryClient.class.getResourceAsStream(fileName);
 		String jstr = IOUtils.toString(inputStream);
-		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+//		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		ObjectMapper mapper = new ObjectMapper();
 		Map jsonMap = mapper.readValue(jstr, Map.class);
 		List<Map<String, String>> results = (List) jsonMap.get("results");
 		List<Map<String, String>> queriedResults = new ArrayList<>();
 		for (Map<String, String> j : results) {
 			try {
-				Date d = formatter.parse(j.get("created"));
+				Date d = FULL_DATE.parse(j.get("created"));
 				if (d.getTime() > createdGT && d.getTime() <= createdLTE) {
 					queriedResults.add(j);
 				}
