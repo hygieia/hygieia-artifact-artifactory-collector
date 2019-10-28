@@ -135,7 +135,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			long numTimesToCollect = (long) Math.ceil((double) (currentTime - lastUpdated) / (double) timeInterval);
 			long lastUpdatedOffset = lastUpdated;
 
-			int numCalls = 0;
 			for (int i = 0; i < numTimesToCollect; i++) {
 				String body = "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(lastUpdatedOffset))
 						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(lastUpdatedOffset + timeInterval, System.currentTimeMillis())))
@@ -206,9 +205,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 				} catch (ParseException e) {
 					LOGGER.error("Parsing artifact items on instance: " + instanceUrl + " and repo: " + repoName, e);
 				}
-				numCalls++;
 			}
-			LOGGER.info("calls to Artifactory count -- " + numCalls);
 		}
 		return baseArtifacts;
 	}
