@@ -128,7 +128,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	public List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated) {
 		List<BaseArtifact> baseArtifacts = new ArrayList<>();
 		if (StringUtils.isNotEmpty(instanceUrl) && StringUtils.isNotEmpty(repoName)) {
-
 			long currentTime = System.currentTimeMillis();
 			// time's worth of data - 1 day
 			long timeInterval = TimeUnit.DAYS.toMillis(1);
@@ -139,7 +138,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			int numCalls = 0;
 			for (int i = 0; i < numTimesToCollect; i++) {
 				String body = "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(lastUpdatedOffset))
-						+ "\", \"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(lastUpdatedOffset + timeInterval, currentTime)))
+						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(lastUpdatedOffset + timeInterval, System.currentTimeMillis())))
 						+ "\"},\"repo\":{\"$eq\":\"" + repoName
 						+ "\"}}).include(\"*\")";
 
@@ -151,7 +150,8 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 				try {
 					JSONObject json = (JSONObject) parser.parse(returnJSON);
 					JSONArray jsonArtifacts = getJsonArray(json, "results");
-					int count = 0;
+					LOGGER.info("Total JSON Artifacts -- " + jsonArtifacts.size());
+					int count =0;
 					for (Object artifact : jsonArtifacts) {
 						JSONObject jsonArtifact = (JSONObject) artifact;
 						BaseArtifact baseArtifact = new BaseArtifact();
