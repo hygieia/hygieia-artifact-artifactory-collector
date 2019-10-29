@@ -10,8 +10,11 @@ import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtilTest;
 import com.capitalone.dashboard.util.Supplier;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.bson.types.ObjectId;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,9 +31,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
@@ -96,17 +98,38 @@ public class DefaultArtifactoryClientTest {
 
 	@Test
 	public void testGetArtifactItems() throws Exception {
-		String artifactItemsJson = getJson("artifactItems.json");
-
 		String instanceUrl = "http://localhost:8081/artifactory/";
 		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
 		String repoName = "release";
 
+		long lastUpdated = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2) - TimeUnit.HOURS.toMillis(1);
+		long currTime = lastUpdated + TimeUnit.HOURS.toMillis(1);
+
+		// with the addition of artifactory pagination, update the times to limit number of calls made in getArtifactItems()
+		JSONObject updatedArtifactItems = updateJsonArtifactTimes("artifactItems.json", currTime);
+		// get latest timestamp
+		List<Map<String,String>> res = ((List) updatedArtifactItems.get("results"));
+		long lastTime = (FULL_DATE.parse((res.get(res.size()-1)).get("created")).getTime());
+		// mock query json in response
+		String artifactItemsJson1 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated,
+				lastUpdated + TimeUnit.DAYS.toMillis(1));
+		String artifactItemsJson2 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated + TimeUnit.DAYS.toMillis(1),
+				lastUpdated + TimeUnit.DAYS.toMillis(2));
+		// additional call from slight offset in milliseconds
+		String artifactItemsJson3 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated + TimeUnit.DAYS.toMillis(2),
+				System.currentTimeMillis());
+
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
-				.thenReturn(new ResponseEntity<>(artifactItemsJson, HttpStatus.OK));
+				.thenReturn(new ResponseEntity<>(artifactItemsJson1, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson2, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson3, HttpStatus.OK));
+
 		when(binaryArtifactRepository.findByArtifactNameAndArtifactVersion("test-dev","1")).thenReturn(null);
 		when(binaryArtifactRepository.findByArtifactNameAndArtifactVersion("test-dev","1")).thenReturn(binaryArtifactIterable(true));
-		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,0);
+		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,lastUpdated);
 		assertThat(baseArtifacts.size(), is(1));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getArtifactName(),is("test-dev"));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getInstanceUrl(),is("http://localhost:8081/artifactory/"));
@@ -122,25 +145,45 @@ public class DefaultArtifactoryClientTest {
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedBy(),is("robot"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedTimeStamp(),is(new Long("1539268736471")));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedBy(),is("robot"));
-		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(new Long("1539268036031")));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(lastTime));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactVersion(),is("1"));
 
 	}
 
 	@Test
 	public void testGetArtifactItemsWithBuildInfo() throws Exception {
-		String artifactItemsJson = getJson("artifactItems.json");
-
 		String instanceUrl = "http://localhost:8081/artifactory/";
 		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
 		String repoName = "release";
 
+		long lastUpdated = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2) - TimeUnit.HOURS.toMillis(1);
+		long currTime = lastUpdated + TimeUnit.HOURS.toMillis(1);
+
+		// with the addition of artifactory pagination, update the times to limit number of calls made in getArtifactItems()
+		JSONObject updatedArtifactItems = updateJsonArtifactTimes("artifactItems.json", currTime);
+		// get latest timestamp
+		List<Map<String,String>> res = ((List) updatedArtifactItems.get("results"));
+		long lastTime = (FULL_DATE.parse((res.get(res.size()-1)).get("created")).getTime());
+		// mock query json in response
+		String artifactItemsJson1 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated,
+				lastUpdated + TimeUnit.DAYS.toMillis(1));
+		String artifactItemsJson2 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated + TimeUnit.DAYS.toMillis(1),
+				lastUpdated + TimeUnit.DAYS.toMillis(2));
+		// additional call from slight offset in milliseconds
+		String artifactItemsJson3 = queryJsonByTime(updatedArtifactItems,
+				lastUpdated + TimeUnit.DAYS.toMillis(2),
+				System.currentTimeMillis());
+
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
-				.thenReturn(new ResponseEntity<>(artifactItemsJson, HttpStatus.OK));
+				.thenReturn(new ResponseEntity<>(artifactItemsJson1, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson2, HttpStatus.OK))
+				.thenReturn(new ResponseEntity<>(artifactItemsJson3, HttpStatus.OK));
 		when(binaryArtifactRepository.findByArtifactNameAndArtifactVersion("test-dev","1"))
 				.thenReturn(binaryArtifactIterable(true));
 
-		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,0);
+		List<BaseArtifact> baseArtifacts = defaultArtifactoryClient.getArtifactItems(instanceUrl, repoName, ArtifactUtilTest.ARTIFACT_PATTERN,lastUpdated);
 		assertThat(baseArtifacts.size(), is(1));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().size(), is(1));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getArtifactName(),is("test-dev"));
@@ -157,15 +200,12 @@ public class DefaultArtifactoryClientTest {
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedBy(),is("robot"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getModifiedTimeStamp(),is(new Long("1539268736471")));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedBy(),is("robot"));
-		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(new Long("1539268036031")));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCreatedTimeStamp(),is(lastTime));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactVersion(),is("1"));
 		assertNotNull(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCollectorItemId());
 		assertNotNull(baseArtifacts.get(0).getBinaryArtifacts().get(0).getBuildInfos());
 
 	}
-
-
-
 
 	@Test
     public void testGetMavenArtifacts() throws Exception {
@@ -233,6 +273,50 @@ public class DefaultArtifactoryClientTest {
         InputStream inputStream = DefaultArtifactoryClient.class.getResourceAsStream(fileName);
         return IOUtils.toString(inputStream);
     }
+
+	// Artifactory Pagination Helper: returns artifact items json with updated times for testing purposes
+	private JSONObject updateJsonArtifactTimes(String fileName, long currentTime) throws IOException {
+		InputStream inputStream = DefaultArtifactoryClient.class.getResourceAsStream(fileName);
+		String jstr = IOUtils.toString(inputStream);
+		ObjectMapper mapper = new ObjectMapper();
+		Map jsonMap = mapper.readValue(jstr, Map.class);
+		List<Map<String, String>> results = (List) jsonMap.get("results");
+		long updatedTime = currentTime;
+
+		for (Map<String, String> j : results) {
+			// override default dates to last few days for testing purposes
+			j.replace("created", (FULL_DATE.format(new Date(updatedTime))));
+			updatedTime += TimeUnit.DAYS.toMillis(1);
+		}
+
+		JSONObject response = new JSONObject();
+		response.put("results", results);
+		response.put("range", jsonMap.get("range"));
+		return response;
+	}
+
+	// Artifactory Pagination Helper: returns queried json string based on time interval
+	private String queryJsonByTime(JSONObject artifactItems, long createdGT, long createdLTE) {
+		List<Map<String, String>> results = (List) artifactItems.get("results");
+		List<Map<String, String>> queriedResults = new ArrayList<>();
+
+		for (Map<String, String> j : results) {
+			try {
+				Date d = FULL_DATE.parse(j.get("created"));
+				if (d.getTime() > createdGT && d.getTime() <= createdLTE) {
+					queriedResults.add(j);
+				}
+			} catch (java.text.ParseException e) {
+				e.printStackTrace();
+			}
+		}
+
+		JSONObject response = new JSONObject();
+		response.put("results", queriedResults);
+		response.put("range", artifactItems.get("range"));
+		return response.toJSONString();
+
+	}
 
     private Iterable<BinaryArtifact> binaryArtifactIterable(boolean buildInfo){
     	BinaryArtifact b = new BinaryArtifact();
