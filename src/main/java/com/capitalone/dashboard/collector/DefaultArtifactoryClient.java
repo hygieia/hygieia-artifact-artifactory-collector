@@ -131,17 +131,12 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			long currentTime = System.currentTimeMillis();
 			// time's worth of data - 1 day
 			long timeInterval = TimeUnit.DAYS.toMillis(1);
-			// calculate # of iterations/calls needed (# of days since last collector update - rounded up)
-			long numTimesToCollect = (long) Math.ceil((double) (currentTime - lastUpdated) / (double) timeInterval);
-			long lastUpdatedOffset = lastUpdated;
 
-			for (int i = 0; i < numTimesToCollect; i++) {
-				String body = "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(lastUpdatedOffset))
-						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(lastUpdatedOffset + timeInterval, System.currentTimeMillis())))
+			for (long startTime = lastUpdated; startTime < currentTime; startTime += timeInterval) {
+				String body = "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(startTime))
+						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(startTime + timeInterval, currentTime)))
 						+ "\"},\"repo\":{\"$eq\":\"" + repoName
 						+ "\"}}).include(\"*\")";
-
-				lastUpdatedOffset += timeInterval;
 
 				ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, body);
 				String returnJSON = responseEntity.getBody();
@@ -168,7 +163,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 							artName = result.getArtifactName();
 							artPath = result.getArtifactGroupId() + "/" + result.getArtifactName();
 						}
-
 
 						if (artifactPath.charAt(artifactPath.length() - 1) == '/') {
 							artifactPath = artifactPath.substring(0, artifactPath.length() - 1);
