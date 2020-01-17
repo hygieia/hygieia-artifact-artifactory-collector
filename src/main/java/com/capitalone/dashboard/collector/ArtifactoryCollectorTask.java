@@ -33,14 +33,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -148,26 +141,36 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         Set<ObjectId> udId = new HashSet<>();
         udId.add(collector.getId());
         processGenericItems(collector);
-        Set<ArtifactItem> existingItemsSet = artifactItemRepository.findByCollectorIdInSet(collector.getId());
+        // check whether to only collect enabled items or all
+        Set<ArtifactItem> existingItemsSet;
+        boolean getEnabled = artifactorySettings.getCollectEnabledItemsOnly();
+        if (getEnabled) {
+            existingItemsSet = artifactItemRepository.findEnabledArtifactItems(collector.getId());
+        } else {
+            existingItemsSet = artifactItemRepository.findByCollectorIdInSet(collector.getId());
+        }
+        LOGGER.info("COLLECTING ENABLED REPOS ONLY=" + getEnabled);
         List<String> instanceUrls = collector.getArtifactoryServers();
+        long start = System.currentTimeMillis();
         instanceUrls.forEach(instanceUrl -> {
-            long start = System.currentTimeMillis();
             logBanner(instanceUrl);
             if (instanceUrl.lastIndexOf('/') == instanceUrl.length() - 1) {
+                long lastUpdated = getLastUpdated(collector);
                 getRepos().forEach(repo -> {
-                    long lastUpdated = getLastUpdated(collector);
                     //Multiple patterns for the repo will be supported in future
                     String pattern = (getPatterns().get(repo)).get(0);
-                    List<BaseArtifact> baseArtifacts = artifactoryClient.getArtifactItems(instanceUrl, repo, pattern, lastUpdated);
                     log("Collecting repository ====>>> " + repo);
+                    List<BaseArtifact> baseArtifacts = artifactoryClient.getArtifactItems(instanceUrl, repo, pattern, lastUpdated);
                     addNewArtifactsItems(baseArtifacts, existingItemsSet, collector);
                 });
                 log("Fetched repos", start, getRepos().size());
             } else {
                 LOGGER.error("Error with artifactory url: " + instanceUrl + ". Url does not end with '/'");
             }
-            log("Finished", start);
         });
+        log("Finished", start);
+        collector.setLastExecuted(start);
+        artifactoryCollectorRepository.save(collector);
     }
 
     private void refreshData(Map<ObjectId, Set<ObjectId>> artifactBuilds) {
@@ -317,7 +320,8 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         for (BaseArtifact baseArtifact : baseArtifacts) {
             ArtifactItem newArtifactItem = baseArtifact.getArtifactItem();
             if (newArtifactItem != null && !existingArtifactItems.contains(newArtifactItem)) {
-                newArtifactItem.setLastUpdated(System.currentTimeMillis());
+                // changed to 'start' instead of System.currentTimeMillis()
+                newArtifactItem.setLastUpdated(start);
                 newArtifactItem.setCollectorId(collector.getId());
                 newArtifactItem = artifactItemRepository.save(newArtifactItem);
                 existingArtifactItems.add(newArtifactItem);
@@ -337,9 +341,10 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
         }
         if (!binaryArtifacts.isEmpty()) {
+            LOGGER.info("Saving " + binaryArtifacts.size() + " binary artifacts");
             binaryArtifacts.forEach(binaryArtifact -> binaryArtifactRepository.save(binaryArtifact));
         }
-        log("New artifacts", start, count);
+        log("New artifacts items", start, count);
     }
 
     private List<BinaryArtifact> nullSafe(List<BinaryArtifact> builds) {

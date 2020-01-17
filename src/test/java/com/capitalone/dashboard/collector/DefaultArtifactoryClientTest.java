@@ -61,6 +61,8 @@ public class DefaultArtifactoryClientTest {
 		r.setPatterns(Arrays.asList(ArtifactUtilTest.IVY_PATTERN1, ArtifactUtilTest.IVY_ARTIFACT_PATTERN1, ArtifactUtilTest.MAVEN_PATTERN1,ArtifactUtilTest.ARTIFACT_PATTERN));
 		serverSetting.setRepoAndPatterns(Collections.singletonList(r));
         settings.setServers(Collections.singletonList(serverSetting));
+        settings.setTimeInterval(3);
+        settings.setTimeUnit("DAYS");
         defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier),binaryArtifactRepository);
     }
     

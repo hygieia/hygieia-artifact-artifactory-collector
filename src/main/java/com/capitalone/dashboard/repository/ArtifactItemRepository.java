@@ -16,7 +16,7 @@ public interface ArtifactItemRepository extends BaseCollectorItemRepository<Arti
     @Query(value="{ 'collectorId' : ?0, options.instanceUrl : ?1, options.repoName : ?2}")
     ArtifactItem findArtifactItem(ObjectId collectorId, String instanceUrl, String repoName);
 
-    @Query(value="{ 'collectorId' : ?0, options.instanceUrl : ?1, enabled: true}")
-    List<ArtifactItem> findEnabledArtifactItems(ObjectId collectorId, String instanceUrl);
+    @Query(value="{ 'collectorId' : ?0, enabled: true}")
+    Set<ArtifactItem> findEnabledArtifactItems(ObjectId collectorId);
 
 }
