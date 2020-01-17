@@ -129,7 +129,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		LOGGER.info("Last collector update=" + FULL_DATE.format(new Date(lastUpdated)));
 		List<BaseArtifact> baseArtifacts = new ArrayList<>();
 		if (StringUtils.isNotEmpty(instanceUrl) && StringUtils.isNotEmpty(repoName)) {
-			int skipCount = 0;
 			long currentTime = System.currentTimeMillis();
 			// unit of time's worth of data
 			TimeUnit unitTime = TimeUnit.valueOf(artifactorySettings.getTimeUnit());
@@ -211,7 +210,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 					LOGGER.error("Parsing artifact items on instance: " + instanceUrl + " and repo: " + repoName, e);
 				}
 			}
-			LOGGER.info("Artifacts skipped=" + skipCount);
 		}
 		return baseArtifacts;
 	}
