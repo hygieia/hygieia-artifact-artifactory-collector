@@ -126,18 +126,27 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	}
 
 	public List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated) {
+		LOGGER.info("Last collector update=" + FULL_DATE.format(new Date(lastUpdated)));
 		List<BaseArtifact> baseArtifacts = new ArrayList<>();
 		if (StringUtils.isNotEmpty(instanceUrl) && StringUtils.isNotEmpty(repoName)) {
 			long currentTime = System.currentTimeMillis();
-			// time's worth of data - 1 day
-			long timeInterval = TimeUnit.DAYS.toMillis(1);
+			// unit of time's worth of data
+			TimeUnit unitTime = TimeUnit.valueOf(artifactorySettings.getTimeUnit());
+			long timeInterval = unitTime.toMillis(1);
+			// lookback time
+			long lookback = artifactorySettings.getTimeInterval();
+			// if lastUpdated is more than 'lookback' days, then set it to 'lookback'
+			if (lastUpdated < (currentTime - unitTime.toMillis(lookback))) {
+				LOGGER.info("Lookback period is -- " + lookback + " " + unitTime.toString());
+				lastUpdated = currentTime - unitTime.toMillis(lookback);
+			}
 
 			for (long startTime = lastUpdated; startTime < currentTime; startTime += timeInterval) {
 				String body = "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(startTime))
 						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(startTime + timeInterval, currentTime)))
 						+ "\"},\"repo\":{\"$eq\":\"" + repoName
 						+ "\"}}).include(\"*\")";
-
+				LOGGER.debug("Artifact Query ==> " + body);
 				ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, body);
 				String returnJSON = responseEntity.getBody();
 				JSONParser parser = new JSONParser();
@@ -157,6 +166,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 
 						Pattern p = Pattern.compile(pattern);
 						BinaryArtifact result = ArtifactUtil.parse(p, fullPath);
+
 						String artName = "";
 						String artPath = artifactPath;
 						if (result != null) {
@@ -194,7 +204,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 							insertOrUpdateBaseArtifact(baseArtifacts, artifactItem, suspect, bas);
 						}
 						count++;
-						LOGGER.info("artifact count -- " + count + "  artifactPath-- " + artifactPath);
+						LOGGER.info("artifact count -- " + count + " repo=" + repoName + "  artifactPath=" + artifactPath);
 					}
 				} catch (ParseException e) {
 					LOGGER.error("Parsing artifact items on instance: " + instanceUrl + " and repo: " + repoName, e);

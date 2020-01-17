@@ -19,7 +19,9 @@ public class ArtifactorySettings {
     String endpoint;
     long offSet;
     String capturePattern;
-
+    long timeInterval;
+    String timeUnit;
+    boolean collectEnabledItemsOnly;
 
     public String getCron() {
         return cron;
@@ -53,7 +55,6 @@ public class ArtifactorySettings {
         this.endpoint = endpoint;
     }
 
-
     public long getOffSet() {
         return offSet;
     }
@@ -62,7 +63,6 @@ public class ArtifactorySettings {
         this.offSet = offSet;
     }
 
-
     public String getCapturePattern() {
         return capturePattern;
     }
@@ -70,4 +70,17 @@ public class ArtifactorySettings {
     public void setCapturePattern(String capturePattern) {
         this.capturePattern = capturePattern;
     }
+
+    public long getTimeInterval() { return timeInterval; }
+
+    public void setTimeInterval(int timeInterval) { this.timeInterval = timeInterval; }
+
+    public String getTimeUnit() { return timeUnit; }
+
+    public void setTimeUnit(String timeUnit) { this.timeUnit = timeUnit; }
+
+    public boolean getCollectEnabledItemsOnly() { return collectEnabledItemsOnly; }
+
+    public void setCollectEnabledItemsOnly(boolean collectEnabledItemsOnly) { this.collectEnabledItemsOnly = collectEnabledItemsOnly; }
+
 }
