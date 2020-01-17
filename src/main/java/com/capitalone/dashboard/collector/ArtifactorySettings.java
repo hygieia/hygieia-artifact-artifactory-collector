@@ -22,7 +22,6 @@ public class ArtifactorySettings {
     long timeInterval;
     String timeUnit;
     boolean collectEnabledItemsOnly;
-    List<String> blacklist;
 
     public String getCron() {
         return cron;
@@ -83,9 +82,5 @@ public class ArtifactorySettings {
     public boolean getCollectEnabledItemsOnly() { return collectEnabledItemsOnly; }
 
     public void setCollectEnabledItemsOnly(boolean collectEnabledItemsOnly) { this.collectEnabledItemsOnly = collectEnabledItemsOnly; }
-
-    public List<String> getBlacklist() { return blacklist; }
-
-    public void setBlacklist(List<String> blacklist) { this.blacklist = blacklist; }
 
 }

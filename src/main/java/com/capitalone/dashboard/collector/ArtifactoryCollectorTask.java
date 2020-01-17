@@ -33,7 +33,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -142,13 +149,8 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         udId.add(collector.getId());
         processGenericItems(collector);
         // check whether to only collect enabled items or all
-        Set<ArtifactItem> existingItemsSet;
         boolean getEnabled = artifactorySettings.getCollectEnabledItemsOnly();
-        if (getEnabled) {
-            existingItemsSet = artifactItemRepository.findEnabledArtifactItems(collector.getId());
-        } else {
-            existingItemsSet = artifactItemRepository.findByCollectorIdInSet(collector.getId());
-        }
+        Set<ArtifactItem> existingItemsSet = getEnabled ? artifactItemRepository.findEnabledArtifactItems(collector.getId()) : artifactItemRepository.findByCollectorIdInSet(collector.getId());
         LOGGER.info("COLLECTING ENABLED REPOS ONLY=" + getEnabled);
         List<String> instanceUrls = collector.getArtifactoryServers();
         long start = System.currentTimeMillis();

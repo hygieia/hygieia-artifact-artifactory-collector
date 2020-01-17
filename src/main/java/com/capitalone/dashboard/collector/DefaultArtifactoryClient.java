@@ -30,7 +30,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestOperations;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -129,9 +128,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	public List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated) {
 		LOGGER.info("Last collector update=" + FULL_DATE.format(new Date(lastUpdated)));
 		List<BaseArtifact> baseArtifacts = new ArrayList<>();
-		// blacklisted artifact paths to be ignored. To be completed in future.
-		List<String> blacklist = artifactorySettings.getBlacklist();
-
 		if (StringUtils.isNotEmpty(instanceUrl) && StringUtils.isNotEmpty(repoName)) {
 			int skipCount = 0;
 			long currentTime = System.currentTimeMillis();
@@ -151,7 +147,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(startTime + timeInterval, currentTime)))
 						+ "\"},\"repo\":{\"$eq\":\"" + repoName
 						+ "\"}}).include(\"*\")";
-				LOGGER.info("Artifact Query ==> " + body);
+				LOGGER.debug("Artifact Query ==> " + body);
 				ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, body);
 				String returnJSON = responseEntity.getBody();
 				JSONParser parser = new JSONParser();
