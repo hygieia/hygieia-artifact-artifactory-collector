@@ -146,7 +146,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						+ "\"}, \"created\" : {\"$lte\" : \"" + FULL_DATE.format(new Date(Math.min(startTime + timeInterval, currentTime)))
 						+ "\"},\"repo\":{\"$eq\":\"" + repoName
 						+ "\"}}).include(\"*\")";
-				LOGGER.debug("Artifact Query ==> " + body);
+				LOGGER.info("Artifact Query ==> " + body);
 				ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, body);
 				String returnJSON = responseEntity.getBody();
 				JSONParser parser = new JSONParser();
@@ -164,44 +164,48 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						String artifactPath = getString(jsonArtifact, "path");
 						String fullPath = artifactPath + "/" + artifactCanonicalName;
 
-						Pattern p = Pattern.compile(pattern);
-						BinaryArtifact result = ArtifactUtil.parse(p, fullPath);
+						try {
+							Pattern p = Pattern.compile(pattern);
+							BinaryArtifact result = ArtifactUtil.parse(p, fullPath);
 
-						String artName = "";
-						String artPath = artifactPath;
-						if (result != null) {
-							artName = result.getArtifactName();
-							artPath = result.getArtifactGroupId() + "/" + result.getArtifactName();
-						}
-
-						if (artifactPath.charAt(artifactPath.length() - 1) == '/') {
-							artifactPath = artifactPath.substring(0, artifactPath.length() - 1);
-						}
-
-						// create artifact_items (collector_item)
-						ArtifactItem artifactItem = createArtifactItem(instanceUrl, repo, artName, artPath);
-
-						String sTimestamp = getString(jsonArtifact, "modified");
-						if (sTimestamp == null) {
-							sTimestamp = getString(jsonArtifact, "created");
-						}
-						long timestamp = 0;
-						if (sTimestamp != null) {
-							try {
-								Date date = FULL_DATE.parse(sTimestamp);
-								timestamp = date.getTime();
-							} catch (java.text.ParseException e) {
-								LOGGER.error("Parsing artifact timestamp: " + sTimestamp, e);
+							String artName = "";
+							String artPath = artifactPath;
+							if (result != null) {
+								artName = result.getArtifactName();
+								artPath = result.getArtifactGroupId() + "/" + result.getArtifactName();
 							}
-						}
 
-						// find existing base artifact matching artifact item unique options
-						BaseArtifact suspect = baseArtifacts.stream().filter(b -> b.getArtifactItem().getArtifactName().equalsIgnoreCase(artifactItem.getArtifactName()) && b.getArtifactItem().getRepoName().equalsIgnoreCase(artifactItem.getRepoName())
-								&& b.getArtifactItem().getPath().equalsIgnoreCase(artifactItem.getPath())).findFirst().orElse(baseArtifact);
-						// create artifactInfo
-						List<BinaryArtifact> bas = createArtifactForArtifactBased(artifactCanonicalName, artifactPath, timestamp, jsonArtifact);
-						if (CollectionUtils.isNotEmpty(bas)) {
-							insertOrUpdateBaseArtifact(baseArtifacts, artifactItem, suspect, bas);
+							if (artifactPath.charAt(artifactPath.length() - 1) == '/') {
+								artifactPath = artifactPath.substring(0, artifactPath.length() - 1);
+							}
+
+							// create artifact_items (collector_item)
+							ArtifactItem artifactItem = createArtifactItem(instanceUrl, repo, artName, artPath);
+
+							String sTimestamp = getString(jsonArtifact, "modified");
+							if (sTimestamp == null) {
+								sTimestamp = getString(jsonArtifact, "created");
+							}
+							long timestamp = 0;
+							if (sTimestamp != null) {
+								try {
+									Date date = FULL_DATE.parse(sTimestamp);
+									timestamp = date.getTime();
+								} catch (java.text.ParseException e) {
+									LOGGER.error("Parsing artifact timestamp: " + sTimestamp, e);
+								}
+							}
+
+							// find existing base artifact matching artifact item unique options
+							BaseArtifact suspect = baseArtifacts.stream().filter(b -> b.getArtifactItem().getArtifactName().equalsIgnoreCase(artifactItem.getArtifactName()) && b.getArtifactItem().getRepoName().equalsIgnoreCase(artifactItem.getRepoName())
+									&& b.getArtifactItem().getPath().equalsIgnoreCase(artifactItem.getPath())).findFirst().orElse(baseArtifact);
+							// create artifactInfo
+							List<BinaryArtifact> bas = createArtifactForArtifactBased(artifactCanonicalName, artifactPath, timestamp, jsonArtifact);
+							if (CollectionUtils.isNotEmpty(bas)) {
+								insertOrUpdateBaseArtifact(baseArtifacts, artifactItem, suspect, bas);
+							}
+						} catch (Exception e) {
+							LOGGER.error("Received Exception= " + e.toString() + " artifactPath=" + artifactPath, e);
 						}
 						count++;
 						LOGGER.info("artifact count -- " + count + " repo=" + repoName + "  artifactPath=" + artifactPath);
