@@ -58,8 +58,7 @@ public class ArtifactItem extends CollectorItem {
 
     @Override
     public int hashCode() {
-        int result = getInstanceUrl().hashCode();
-        result = 31 * result + getRepoName().hashCode();
+        int result = Objects.hash(getInstanceUrl(),getRepoName(),getArtifactName(),getPath());
         return result;
     }
 }

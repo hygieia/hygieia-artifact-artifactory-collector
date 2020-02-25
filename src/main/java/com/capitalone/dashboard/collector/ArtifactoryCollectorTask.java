@@ -149,9 +149,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         udId.add(collector.getId());
         processGenericItems(collector);
         // check whether to only collect enabled items or all
-        boolean getEnabled = artifactorySettings.getCollectEnabledItemsOnly();
-        Set<ArtifactItem> existingItemsSet = getEnabled ? artifactItemRepository.findEnabledArtifactItems(collector.getId()) : artifactItemRepository.findByCollectorIdInSet(collector.getId());
-        LOGGER.info("COLLECTING ENABLED REPOS ONLY=" + getEnabled);
+        Set<ArtifactItem> existingItemsSet = artifactItemRepository.findByCollectorIdInSet(collector.getId());
         List<String> instanceUrls = collector.getArtifactoryServers();
         long start = System.currentTimeMillis();
         instanceUrls.forEach(instanceUrl -> {
@@ -333,8 +331,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             if (!CollectionUtils.isEmpty(binaryArtifactsAssociated) ) {
                 for (BinaryArtifact b:binaryArtifactsAssociated) {
                     ArtifactItem found = existingArtifactItems.stream().filter(newArtifactItem::equals).findAny().orElse(null);
-                    ObjectId existingId = found.getId();
-                    ObjectId collectorItemId = newArtifactItem.getId()!=null? newArtifactItem.getId(): existingId;
+                    ObjectId collectorItemId = newArtifactItem.getId()!=null? newArtifactItem.getId(): getExistingArtifactIdAndSave(found);
                     b.setCollectorItemId(collectorItemId);
                     binaryArtifacts.add(b);
                 }
@@ -347,6 +344,15 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             binaryArtifacts.forEach(binaryArtifact -> binaryArtifactRepository.save(binaryArtifact));
         }
         log("New artifacts items", start, count);
+    }
+
+    private ObjectId getExistingArtifactIdAndSave(ArtifactItem found) {
+        if(Objects.nonNull(found)){
+            found.setLastUpdated(System.currentTimeMillis());
+            artifactItemRepository.save(found);
+            return found.getId();
+        }
+        return null;
     }
 
     private List<BinaryArtifact> nullSafe(List<BinaryArtifact> builds) {
