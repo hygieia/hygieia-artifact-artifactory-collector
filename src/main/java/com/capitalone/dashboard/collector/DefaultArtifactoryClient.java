@@ -197,7 +197,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 							}
 
 							// find existing base artifact matching artifact item unique options
-							BaseArtifact suspect = baseArtifacts.stream().filter(b -> b.getArtifactItem().getArtifactName().equalsIgnoreCase(artifactItem.getArtifactName()) && b.getArtifactItem().getRepoName().equalsIgnoreCase(artifactItem.getRepoName())
+							BaseArtifact suspect = baseArtifacts.stream().filter(b ->
+									((String)b.getArtifactItem().getArtifactName()).equalsIgnoreCase((String)artifactItem.getArtifactName())
+									&& b.getArtifactItem().getRepoName().equalsIgnoreCase(artifactItem.getRepoName())
 									&& b.getArtifactItem().getPath().equalsIgnoreCase(artifactItem.getPath())).findFirst().orElse(baseArtifact);
 							// create artifactInfo
 							List<BinaryArtifact> bas = createArtifactForArtifactBased(artifactCanonicalName, artifactPath, timestamp, jsonArtifact);
