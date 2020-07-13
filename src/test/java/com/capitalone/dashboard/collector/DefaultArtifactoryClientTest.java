@@ -586,22 +586,6 @@ public class DefaultArtifactoryClientTest {
 		}
 
 		return b;
-//		BinaryArtifact b_1 = new BinaryArtifact();
-//		b_1.setType("file");
-//		b_1.setCreatedTimeStamp(new Long("1539268036031"));
-//		b_1.setCreatedBy("auto");
-//		b_1.setModifiedTimeStamp(new Long("1539268036031"));
-//		b_1.setModifiedBy("auto");
-//		b_1.setActual_md5("111aadc11ed11b1111df111d16d6c8d821112f1");
-//		b_1.setActual_sha1("111aadc11ed11b1111df111d16d6c8d821112f1");
-//		b_1.setCanonicalName("name");
-//		b_1.setArtifactName("test-dev");
-//		b.setArtifactVersion("0");
-//		b_1.setTimestamp(new Long("1539268036030"));
-//		b_1.setCollectorItemId(ObjectId.get());
-//
-//
-//		return Arrays.asList(b,b_1);
 	}
 
 	private BinaryArtifact createMatchedExistingBinaryArtifact(ObjectId collectorItemId, String artifactName, String artifactVersion, String path, String repoName, boolean buildInfo){
