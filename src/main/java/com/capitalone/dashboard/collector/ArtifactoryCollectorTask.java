@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -112,6 +113,8 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             case ARTIFACT_BASED:
                 collectArtifactBased(collector);
                 break;
+            case HYBRID_MODE:
+                collectHybridMode(collector);
             default:
                 LOGGER.error("Error with collection mode. Valid modes are REPO_BASED or ARTIFACT_BASED to be set as properties.");
                 break;
@@ -173,9 +176,49 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         artifactoryCollectorRepository.save(collector);
     }
 
+    protected  void collectHybridMode(ArtifactoryCollector collector){
+        // find all enabled artifactory collector-items
+        long start = System.currentTimeMillis();
+        AtomicInteger count = new AtomicInteger();
+        if (Objects.isNull(collector)) return;
+        List<ArtifactItem> enabledArtifactItems = artifactItemRepository.findEnabledArtifactItems(collector.getId());
+        for (ArtifactItem artifactItem: enabledArtifactItems) {
+            List<String> patterns = getPattern(artifactItem.getRepoName());
+            List<String> subRepos = getAssociatedSubRepos(artifactItem.getRepoName());
+            if(Objects.isNull(patterns)){
+                LOGGER.error("patterns null for repo name " + artifactItem.getRepoName());
+            } else {
+                List<BinaryArtifact> binaryArtifacts = artifactoryClient.getArtifacts(artifactItem, patterns, subRepos);
+                if(!CollectionUtils.isEmpty(binaryArtifacts)){
+                    binaryArtifactRepository.save(binaryArtifacts);
+                }
+                artifactItem.setLastUpdated(System.currentTimeMillis());
+                artifactItemRepository.save(artifactItem);
+                count.getAndIncrement();
+                LOGGER.info("artifact item count ---" + count);
+            }
+        }
+        log("Completed run ++ -" + start + "count --"+ count);
+        collector.setLastExecuted(start);
+        artifactoryCollectorRepository.save(collector);
+    }
+
+    private List<String> getPattern(String repoName){
+        if(Objects.isNull(repoName)) return null;
+        List<String> pattern =  getPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
+        if (CollectionUtils.isEmpty(pattern)) return null;
+        return pattern;
+    }
+
+    private List<String> getAssociatedSubRepos(String repoName){
+        if(Objects.isNull(repoName)) return null;
+        List<String> subRepos =  getSubRepos().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
+        return subRepos;
+    }
+
     private void refreshData(Map<ObjectId, Set<ObjectId>> artifactBuilds) {
-       artifactBuilds.forEach((artCollectorItemId, buildIdSet) -> {
-           Iterable<BinaryArtifact> binaryArtifacts = binaryArtifactRepository.findByCollectorItemId(artCollectorItemId);
+        artifactBuilds.forEach((artCollectorItemId, buildIdSet) -> {
+            Iterable<BinaryArtifact> binaryArtifacts = binaryArtifactRepository.findByCollectorItemId(artCollectorItemId);
             List<Build> associatedBuilds = new ArrayList<>();
             buildIdSet.forEach(buildId -> {
                 associatedBuilds.add(buildRepository.findOne(buildId));
@@ -188,7 +231,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             });
 
 
-     });
+        });
     }
 
     /**
@@ -390,12 +433,27 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         return repoAndPatterns.stream().collect(Collectors.toMap(RepoAndPattern::getRepo, RepoAndPattern::getPatterns));
     }
 
+    private Map<String, List<String>> getSubRepos() {
+        Map<String, List<String>> allSubRepos = new HashedMap();
+        artifactorySettings.getServers().forEach(serverSetting -> {
+            allSubRepos.putAll(getSubReposForServ(serverSetting.getRepoAndPatterns()));
+        });
+        return allSubRepos;
+
+    }
+
+    private static Map<String, List<String>> getSubReposForServ(List<RepoAndPattern> repoAndPatterns) {
+        return repoAndPatterns.stream()
+                .filter(repoAndPattern -> !CollectionUtils.isEmpty(repoAndPattern.getSubRepos()))
+                .collect(Collectors.toMap(RepoAndPattern::getRepo, RepoAndPattern::getSubRepos));
+    }
+
     private long getLastUpdated(Collector collector) {
-       if(!Objects.isNull(collector.getLastExecuted())) {
-			return collector.getLastExecuted();
-		}else{
-         return System.currentTimeMillis() - artifactorySettings.getOffSet();
-		}
+        if(!Objects.isNull(collector.getLastExecuted())) {
+            return collector.getLastExecuted();
+        }else{
+            return System.currentTimeMillis() - artifactorySettings.getOffSet();
+        }
     }
 
     protected Map<ObjectId, Set<ObjectId>> processGenericItems(ArtifactoryCollector collector) {

@@ -2,6 +2,7 @@ package com.capitalone.dashboard.collector;
 
 import java.util.List;
 
+import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
 import com.capitalone.dashboard.model.BinaryArtifact;
@@ -31,4 +32,6 @@ public interface ArtifactoryClient {
     List<BinaryArtifact> getArtifacts(String instanceUrl, String repoName, long lastUpdated);
 
     List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated);
+
+    List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem, List<String> pattern, List<String> subRepos);
 }

@@ -1,14 +1,9 @@
 package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.client.RestClient;
-import com.capitalone.dashboard.model.ArtifactItem;
-import com.capitalone.dashboard.model.ArtifactoryRepo;
-import com.capitalone.dashboard.model.BaseArtifact;
-import com.capitalone.dashboard.model.BinaryArtifact;
-import com.capitalone.dashboard.model.ServerSetting;
+import com.capitalone.dashboard.model.*;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtil;
-import com.capitalone.dashboard.util.Supplier;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.IterableUtils;
@@ -20,14 +15,11 @@ import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestOperations;
 
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -221,6 +213,183 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		return baseArtifacts;
 	}
 
+	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns, List<String> subRepos){
+        long start = getLastUpdated(artifactItem.getLastUpdated());
+		List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
+
+		try {
+			JSONArray jsonArtifacts = sendPost(start,
+					artifactItem.getRepoName(),
+					artifactItem.getArtifactName(),
+					artifactItem.getInstanceUrl(),
+					subRepos);
+			if (Objects.isNull(jsonArtifacts)) {
+				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName() + " artifactItem=" + artifactItem.getArtifactName()
+				+ " collectorItemId=" + artifactItem.getId());
+				return binaryArtifacts;
+			}
+			LOGGER.info("Total JSON Artifacts -- " + jsonArtifacts.size());
+			int count = 0;
+			for (Object artifact : jsonArtifacts) {
+				JSONObject jsonArtifact = (JSONObject) artifact;
+				BinaryArtifact newbinaryArtifact = createBinaryArtifactFromJsonArtifact(jsonArtifact, artifactItem);
+				final String artifactCanonicalName = getString(jsonArtifact, "name");
+				String artifactPath = getString(jsonArtifact, "path");
+				String fullPath = artifactPath + "/" + artifactCanonicalName;
+
+				BinaryArtifact parsedResult = new BinaryArtifact();
+				boolean isValidParse = false;
+				// check if have values for all regex groups in pattern
+				// try each pattern, if all values are found, then break loop; otherwise continue onto next pattern
+				for (String pattern: patterns) {
+					Pattern p = Pattern.compile(pattern);
+					isValidParse = ArtifactUtil.validParse(parsedResult, p, fullPath);
+					if (isValidParse) break;
+				}
+				if (parsedResult != null && isValidParse) {
+					// version null check
+					if (parsedResult.getArtifactVersion() == null) {
+						LOGGER.error("Could not find version for repo=" + artifactItem.getRepoName() + " fullPath=" + fullPath);
+						break;
+					}
+					updateBinaryArtifactWithPatternMatchedAttributes(newbinaryArtifact, parsedResult);
+					// Check if matching Binary Artifact already exists
+					BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(artifactItem.getId(),
+							newbinaryArtifact.getArtifactVersion());
+					if (Objects.nonNull(existingBinaryArtifact)) {
+						// update existing binary artifact for that version and update timestamp
+						updateExistingBinaryArtifact(newbinaryArtifact, existingBinaryArtifact);
+						binaryArtifacts.add(existingBinaryArtifact);
+					} else {
+						// get latest binary artifact for that particular artifact item with build info
+						attachLatestBuildInfo(artifactItem, newbinaryArtifact);
+						binaryArtifacts.add(newbinaryArtifact);
+					}
+					count++;
+					LOGGER.info("json artifact count -- " + count + " repo=" + artifactItem.getRepoName() + "  artifactPath=" + artifactPath);
+				} else {
+					// invalid parse/not enough data found
+					count++;
+					LOGGER.error("Not enough data found for json artifact count -- " + count + " repo=" + artifactItem.getRepoName() + "  artifactPath=" + artifactPath);
+				}
+			}
+
+		} catch (ParseException e) {
+			LOGGER.error("Parsing artifact items on instance: " + artifactItem.getInstanceUrl() + " and repo: " + artifactItem.getRepoName(), e);
+		} catch (Exception e) {
+			LOGGER.error("Received Exception= " + e.toString() + " artifactPath=" + artifactItem.getPath(), e);
+		}
+		return binaryArtifacts;
+	}
+
+	private long getLastUpdated(long lastUpdated) {
+		if(lastUpdated > 0) {
+			return lastUpdated;
+		}else{
+			return System.currentTimeMillis() - artifactorySettings.getOffSet();
+		}
+	}
+
+	private JSONArray sendPost(long start, String repoName, String artifactName, String instanceUrl, List<String> subRepos) throws ParseException {
+		String returnJSON = sendPostQueryByRepo(start, repoName, artifactName, instanceUrl);
+		if (Objects.isNull(returnJSON)) return null;
+		JSONParser parser = new JSONParser();
+		JSONArray jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
+		if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
+		// retry post query with subrepo
+		if (CollectionUtils.isEmpty(subRepos)) return null;
+        for (String subRepo : subRepos) {
+			returnJSON = sendPostQueryByRepo(start, subRepo, artifactName, instanceUrl);
+			if (!Objects.isNull(returnJSON)) {
+				jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
+			}
+			if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
+		}
+		return null;
+	}
+
+	private String sendPostQueryByRepo(long start, String repo, String artifactName, String instanceUrl) {
+		String query = buildQuery(start, repo, artifactName);
+		LOGGER.info("Artifact Query ==> " + query);
+		ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
+		if (Objects.isNull(responseEntity)) return null;
+		return responseEntity.getBody();
+	}
+
+	private String buildQuery(long start, String repo,String artifactName){
+		String constructPath = "*/"+artifactName+"/*";
+		String query =  "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(start))
+                + "\"},\"repo\":{\"$eq\":\"" + repo
+				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}}).include(\"*\")";
+		return query;
+
+	}
+
+	private JSONArray parseJsonArtifacts(JSONParser parser, String returnJSON) throws ParseException {
+		JSONObject json = (JSONObject) parser.parse(returnJSON);
+		JSONArray jsonArtifacts = getJsonArray(json, "results");
+		return jsonArtifacts;
+	}
+
+	private BinaryArtifact createBinaryArtifactFromJsonArtifact(JSONObject jsonArtifact, ArtifactItem artifactItem) {
+		BinaryArtifact binaryArtifact = new BinaryArtifact();
+		binaryArtifact.setCollectorItemId(artifactItem.getId());
+		binaryArtifact.setRepo(getString(jsonArtifact, "repo"));
+		binaryArtifact.setPath(getString(jsonArtifact, "path"));
+		binaryArtifact.setCanonicalName(getString(jsonArtifact, "name"));
+		binaryArtifact.setType(getString(jsonArtifact, "type"));
+		binaryArtifact.setCreatedTimeStamp(convertTimestamp(getString(jsonArtifact, "created")));
+		binaryArtifact.setCreatedBy(getString(jsonArtifact, "created_by"));
+		binaryArtifact.setModifiedTimeStamp(convertTimestamp(getString(jsonArtifact, "modified")));
+		binaryArtifact.setModifiedBy(getString(jsonArtifact, "modified_by"));
+		binaryArtifact.setActual_md5(getString(jsonArtifact, "actual_md5"));
+		binaryArtifact.setActual_sha1(getString(jsonArtifact, "actual_sha1"));
+		binaryArtifact.setVirtualRepos(getJsonArray(jsonArtifact, "virtual_repos"));
+		binaryArtifact.setTimestamp(convertTimestamp(getString(jsonArtifact, "updated")));
+
+		return binaryArtifact;
+	}
+
+	private BinaryArtifact updateBinaryArtifactWithPatternMatchedAttributes(BinaryArtifact binaryArtifact, BinaryArtifact result) {
+		binaryArtifact.setArtifactName(result.getArtifactName());
+		binaryArtifact.setArtifactGroupId(result.getArtifactGroupId()) ;
+		binaryArtifact.setArtifactVersion(result.getArtifactVersion());
+		binaryArtifact.setArtifactExtension(result.getArtifactExtension());
+		binaryArtifact.setArtifactModule(result.getArtifactModule());
+		binaryArtifact.setArtifactClassifier(result.getArtifactClassifier());
+
+		return binaryArtifact;
+	}
+
+	private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
+		// update all fields except build infos
+		existingBinaryArtifact.setCollectorItemId(newBinaryArtifact.getCollectorItemId());
+		existingBinaryArtifact.setCanonicalName(newBinaryArtifact.getCanonicalName());
+		existingBinaryArtifact.setArtifactGroupId(newBinaryArtifact.getArtifactGroupId());
+        existingBinaryArtifact.setType(newBinaryArtifact.getType());
+		existingBinaryArtifact.setCreatedTimeStamp(newBinaryArtifact.getCreatedTimeStamp());
+		existingBinaryArtifact.setCreatedBy(newBinaryArtifact.getCreatedBy());
+		existingBinaryArtifact.setModifiedTimeStamp(newBinaryArtifact.getModifiedTimeStamp());
+		existingBinaryArtifact.setModifiedBy(newBinaryArtifact.getModifiedBy());
+		existingBinaryArtifact.setActual_sha1(newBinaryArtifact.getActual_sha1());
+		existingBinaryArtifact.setActual_md5(newBinaryArtifact.getActual_md5());
+		existingBinaryArtifact.setVirtualRepos(newBinaryArtifact.getVirtualRepos());
+		// following values will exist depending on pattern matched
+		existingBinaryArtifact.setArtifactExtension(newBinaryArtifact.getArtifactExtension());
+		existingBinaryArtifact.setArtifactClassifier(newBinaryArtifact.getArtifactClassifier());
+        existingBinaryArtifact.setArtifactModule(newBinaryArtifact.getArtifactModule());
+
+		//update timestamp
+		existingBinaryArtifact.setTimestamp(System.currentTimeMillis());
+	}
+
+	private void attachLatestBuildInfo(ArtifactItem artifactItem, BinaryArtifact binaryArtifact) {
+		// get latest binary artifact associated with the artifact item by desc timestamp
+		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdOrderByTimestampDesc(artifactItem.getId());
+		if (Objects.isNull(latestWithBuildInfo)) return;
+		binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
+	}
+
 	private void insertOrUpdateBaseArtifact(List<BaseArtifact> baseArtifacts, ArtifactItem artifactItem, BaseArtifact suspect, List<BinaryArtifact> bas) {
 		for (BinaryArtifact ba: bas) {
 			if(containsBinaryArtifactWithBuildInfo(suspect, ba)){
@@ -233,6 +402,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 
 		}
 	}
+
 
 	private void addNewBaseArtifact(List<BaseArtifact> baseArtifacts, ArtifactItem artifactItem, BaseArtifact suspect, BinaryArtifact ba) {
 		suspect.getBinaryArtifacts().add(ba);
@@ -386,18 +556,18 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		List<BinaryArtifact> binaryArtifactList = new ArrayList<>();
 		int idx = 0;
 		for (Pattern pattern : artifactPatterns) {
-         result = ArtifactUtil.parse(pattern, fullPath);
-            if (result != null) {
-                String artifactName = result.getArtifactName();
-                String artifactVersion = result.getArtifactVersion();
-                Iterable<BinaryArtifact> bas = binaryArtifactRepository.findByArtifactNameAndArtifactVersion(artifactName, artifactVersion);
-                if(!IterableUtils.isEmpty(bas)){
-				   for (BinaryArtifact ba: bas) {
-					   setCollectorItemId(result, ba);
-					   setBuilds(result, ba);
-					   binaryArtifactRepository.delete(ba.getId());
-				   }
-			   	}
+			result = ArtifactUtil.parse(pattern, fullPath);
+			if (result != null) {
+				String artifactName = result.getArtifactName();
+				String artifactVersion = result.getArtifactVersion();
+				Iterable<BinaryArtifact> bas = binaryArtifactRepository.findByArtifactNameAndArtifactVersion(artifactName, artifactVersion);
+				if(!IterableUtils.isEmpty(bas)){
+					for (BinaryArtifact ba: bas) {
+						setCollectorItemId(result, ba);
+						setBuilds(result, ba);
+						binaryArtifactRepository.delete(ba.getId());
+					}
+				}
 				result.setType(getString(jsonArtifact, "type"));
 				result.setCreatedTimeStamp(convertTimestamp(getString(jsonArtifact, "created")));
 				result.setCreatedBy(getString(jsonArtifact, "created_by"));
@@ -412,9 +582,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 
 				binaryArtifactList.add(result);
 				if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Artifact at " + fullPath + " matched pattern " + idx);
-                }
-            }
+					LOGGER.debug("Artifact at " + fullPath + " matched pattern " + idx);
+				}
+			}
 			idx++;
 		}
 
@@ -576,9 +746,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		List<ServerSetting> servers = this.artifactorySettings.getServers();
 		List<String> userNames = new ArrayList<>();
 		List<String> apiKeys = new ArrayList<>();
-		 servers.forEach(serverSetting -> {
-			 userNames.add(serverSetting.getUsername());
-			 apiKeys.add(serverSetting.getApiKey());
+		servers.forEach(serverSetting -> {
+			userNames.add(serverSetting.getUsername());
+			apiKeys.add(serverSetting.getApiKey());
 		});
 
 		if (CollectionUtils.isNotEmpty(servers) && CollectionUtils.isNotEmpty(userNames) && CollectionUtils.isNotEmpty(apiKeys)) {
