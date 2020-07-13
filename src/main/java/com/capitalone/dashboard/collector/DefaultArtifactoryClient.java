@@ -250,7 +250,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 					isValidParse = ArtifactUtil.validParse(parsedResult, p, fullPath);
 					if (isValidParse) break;
 				}
-				if (parsedResult != null && isValidParse) {
+				if (isValidParse) {
 					// version null check
 					if (parsedResult.getArtifactVersion() == null) {
 						LOGGER.error("Could not find version for repo=" + artifactItem.getRepoName() + " fullPath=" + fullPath);
