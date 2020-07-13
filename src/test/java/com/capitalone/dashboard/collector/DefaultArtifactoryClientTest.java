@@ -1,6 +1,7 @@
 package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.client.RestClient;
+import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
 import com.capitalone.dashboard.model.BinaryArtifact;
