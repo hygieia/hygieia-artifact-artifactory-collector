@@ -264,7 +264,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 							newbinaryArtifact.getArtifactVersion());
 					if (Objects.nonNull(existingBinaryArtifact)) {
 						// update existing binary artifact for that version and update timestamp
-						LOGGER.info("Existing binary artifact found!! binaryArtifact id=" + existingBinaryArtifact.getId());
 						updateExistingBinaryArtifact(newbinaryArtifact, existingBinaryArtifact);
 						binaryArtifacts.add(existingBinaryArtifact);
 					} else {
@@ -403,7 +402,6 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		// get latest binary artifact associated with the artifact item by desc timestamp
 		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), new Sort(Sort.Direction.DESC, "timestamp"));
 		if (Objects.isNull(latestWithBuildInfo)) return;
-		System.out.println(latestWithBuildInfo.getBuildInfos().size());
 		binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
 	}
 
