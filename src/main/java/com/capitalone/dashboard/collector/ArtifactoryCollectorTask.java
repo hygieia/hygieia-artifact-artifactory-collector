@@ -182,6 +182,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         AtomicInteger count = new AtomicInteger();
         if (Objects.isNull(collector)) return;
         List<ArtifactItem> enabledArtifactItems = artifactItemRepository.findEnabledArtifactItems(collector.getId());
+        LOGGER.info("Total Enabled Artifact Items -- " + enabledArtifactItems.size());
         for (ArtifactItem artifactItem: enabledArtifactItems) {
             List<String> patterns = getPattern(artifactItem.getRepoName());
             List<String> subRepos = getAssociatedSubRepos(artifactItem.getRepoName());
