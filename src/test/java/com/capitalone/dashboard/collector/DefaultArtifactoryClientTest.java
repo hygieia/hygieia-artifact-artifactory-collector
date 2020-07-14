@@ -21,6 +21,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -230,22 +231,9 @@ public class DefaultArtifactoryClientTest {
 
 		when(binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(id, "1")).thenReturn(null);
 		// binary artifact found with matching collector item id
-		when(binaryArtifactRepository.findTopByCollectorItemIdOrderByTimestampDesc(id)).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
+		when(binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(id, new Sort(Sort.Direction.DESC, "timestamp"))).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
-		assertThat(binaryArtifacts.size(), is(1));
-		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
-		assertThat(binaryArtifacts.get(0).getCanonicalName(),is("manifest.json"));
-		assertThat(binaryArtifacts.get(0).getArtifactGroupId(),is("dummy"));
-		assertThat(binaryArtifacts.get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
-		assertThat(binaryArtifacts.get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
-		assertThat(binaryArtifacts.get(0).getArtifactExtension(),is("json"));
-		assertThat(binaryArtifacts.get(0).getType(),is("file"));
-		assertThat(binaryArtifacts.get(0).getModifiedBy(),is("robot"));
-		assertThat(binaryArtifacts.get(0).getModifiedTimeStamp(),is(FULL_DATE.parse("2018-10-11T14:38:56.471Z").getTime()));
-		assertThat(binaryArtifacts.get(0).getCreatedBy(),is("robot"));
-		assertThat(binaryArtifacts.get(0).getCreatedTimeStamp(),is(FULL_DATE.parse("2018-10-11T14:27:16.031Z").getTime()));
-		assertThat(binaryArtifacts.get(0).getArtifactVersion(),is("1"));
-		assertThat(binaryArtifacts.get(0).getVirtualRepos(), is(Arrays.asList("docker-managed")));
+		assertThat(binaryArtifacts.size(), is(0));
 	}
 
 	@Test

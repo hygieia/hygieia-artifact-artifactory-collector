@@ -19,6 +19,7 @@ import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -228,8 +229,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 					artifactItem.getInstanceUrl(),
 					subRepos);
 			if (Objects.isNull(jsonArtifacts)) {
-				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName() + " artifactItem=" + artifactItem.getArtifactName()
-				+ " collectorItemId=" + artifactItem.getId());
+				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName()
+						+ " artifactName=" + artifactItem.getArtifactName()
+						+ " collectorItemId=" + artifactItem.getId());
 				return binaryArtifacts;
 			}
 			LOGGER.info("Total JSON Artifacts -- " + jsonArtifacts.size());
@@ -265,16 +267,25 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						updateExistingBinaryArtifact(newbinaryArtifact, existingBinaryArtifact);
 						binaryArtifacts.add(existingBinaryArtifact);
 					} else {
-						// get latest binary artifact for that particular artifact item with build info
+						// get latest binary artifact for this artifact item with build info
 						attachLatestBuildInfo(artifactItem, newbinaryArtifact);
-						binaryArtifacts.add(newbinaryArtifact);
+						// save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
+						binaryArtifactRepository.save(newbinaryArtifact);
 					}
 					count++;
-					LOGGER.info("json artifact count -- " + count + " repo=" + artifactItem.getRepoName() + "  artifactPath=" + artifactPath);
+					LOGGER.info("json artifact count -- " + count
+							+ " repo=" + artifactItem.getRepoName()
+							+ " artifactPath=" + artifactPath
+							+ " artifactCanonicalName=" + artifactCanonicalName
+							+ " collectorItemId=" + artifactItem.getId());
 				} else {
 					// invalid parse/not enough data found
 					count++;
-					LOGGER.error("Not enough data found for json artifact count -- " + count + " repo=" + artifactItem.getRepoName() + "  artifactPath=" + artifactPath);
+					LOGGER.error("Not enough data found for json artifact count -- " + count
+							+ " repo=" + artifactItem.getRepoName()
+							+ " artifactPath=" + artifactPath
+							+ " artifactCanonicalName=" + artifactCanonicalName
+							+ " collectorItemId=" + artifactItem.getId());
 				}
 			}
 
@@ -349,7 +360,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		binaryArtifact.setActual_md5(getString(jsonArtifact, "actual_md5"));
 		binaryArtifact.setActual_sha1(getString(jsonArtifact, "actual_sha1"));
 		binaryArtifact.setVirtualRepos(getJsonArray(jsonArtifact, "virtual_repos"));
-		binaryArtifact.setTimestamp(convertTimestamp(getString(jsonArtifact, "updated")));
+		binaryArtifact.setTimestamp(System.currentTimeMillis());
 
 		return binaryArtifact;
 	}
@@ -384,12 +395,12 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
         existingBinaryArtifact.setArtifactModule(newBinaryArtifact.getArtifactModule());
 
 		//update timestamp
-		existingBinaryArtifact.setTimestamp(System.currentTimeMillis());
+		existingBinaryArtifact.setTimestamp(newBinaryArtifact.getTimestamp());
 	}
 
 	private void attachLatestBuildInfo(ArtifactItem artifactItem, BinaryArtifact binaryArtifact) {
 		// get latest binary artifact associated with the artifact item by desc timestamp
-		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdOrderByTimestampDesc(artifactItem.getId());
+		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), new Sort(Sort.Direction.DESC, "timestamp"));
 		if (Objects.isNull(latestWithBuildInfo)) return;
 		binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
 	}
