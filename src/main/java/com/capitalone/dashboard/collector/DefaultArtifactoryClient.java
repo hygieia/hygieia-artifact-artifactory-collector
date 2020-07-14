@@ -267,7 +267,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						updateExistingBinaryArtifact(newbinaryArtifact, existingBinaryArtifact);
 						binaryArtifacts.add(existingBinaryArtifact);
 					} else {
-						// get latest binary artifact for that particular artifact item with build info
+						// get latest binary artifact for this artifact item with build info
 						attachLatestBuildInfo(artifactItem, newbinaryArtifact);
 						// save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
 						binaryArtifactRepository.save(newbinaryArtifact);
