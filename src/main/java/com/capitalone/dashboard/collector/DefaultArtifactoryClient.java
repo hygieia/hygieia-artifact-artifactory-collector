@@ -335,7 +335,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		String constructPath = "*/"+artifactName+"/*";
 		String query =  "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(start))
                 + "\"},\"repo\":{\"$eq\":\"" + repo
-				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}}).include(\"*\")";
+				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}})"
+				+ ".include(\"*\")"
+				+ ".sort({\"$asc\" : [\"created\"]})";
 		return query;
 
 	}
