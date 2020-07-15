@@ -35,6 +35,7 @@ public class ArtifactoryCollector extends Collector {
                 break;
 
             case ARTIFACT_BASED:
+            case HYBRID_MODE:
                 options.put(ArtifactItem.INSTANCE_URL, "");
                 options.put(ArtifactItem.REPO_NAME, "");
                 options.put(ArtifactItem.ARTIFACT_NAME, "");
