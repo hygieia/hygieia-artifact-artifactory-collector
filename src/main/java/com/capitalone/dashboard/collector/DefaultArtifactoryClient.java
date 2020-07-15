@@ -337,7 +337,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
                 + "\"},\"repo\":{\"$eq\":\"" + repo
 				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}})"
 				+ ".include(\"*\")"
-				+ ".sort({\"$asc\" : [\"created\"]})";
+				+ ".sort({\"$asc\" : [\"modified\"]})";
 		return query;
 
 	}
