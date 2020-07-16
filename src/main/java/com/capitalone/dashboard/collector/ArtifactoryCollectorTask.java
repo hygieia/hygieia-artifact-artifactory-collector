@@ -106,6 +106,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     @Override
     public void collect(ArtifactoryCollector collector) {
+        LOGGER.info("COLLECTION MODE= " + artifactorySettings.getMode());
         switch (artifactorySettings.getMode()) {
             case REPO_BASED:
                 collectRepoBased(collector);
@@ -115,8 +116,9 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                 break;
             case HYBRID_MODE:
                 collectHybridMode(collector);
+                break;
             default:
-                LOGGER.error("Error with collection mode. Valid modes are REPO_BASED or ARTIFACT_BASED to be set as properties.");
+                LOGGER.error("Error with collection mode. Valid modes are REPO_BASED, ARTIFACT_BASED, or HYBRID_MODE to be set as properties.");
                 break;
         }
 
@@ -206,7 +208,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     private List<String> getPattern(String repoName){
         if(Objects.isNull(repoName)) return null;
-        List<String> pattern =  getPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
+        List<String> pattern =  getRepoAndSubRepoPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
         if (CollectionUtils.isEmpty(pattern)) return null;
         return pattern;
     }
@@ -430,8 +432,26 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         return patterns;
     }
 
+    private Map<String, List<String>> getRepoAndSubRepoPatterns() {
+        Map<String, List<String>> patterns = new HashedMap();
+        artifactorySettings.getServers().forEach(serverSetting -> {
+            patterns.putAll(getRepoAndPatternsForServ(serverSetting.getRepoAndPatterns()));
+            patterns.putAll(getSubRepoPatternsForServ(serverSetting.getRepoAndPatterns()));
+        });
+        return patterns;
+    }
+
     private static Map<String, List<String>> getRepoAndPatternsForServ(List<RepoAndPattern> repoAndPatterns) {
         return repoAndPatterns.stream().collect(Collectors.toMap(RepoAndPattern::getRepo, RepoAndPattern::getPatterns));
+    }
+
+    private static Map<String, List<String>> getSubRepoPatternsForServ(List<RepoAndPattern> repoAndPatterns) {
+        Map<String, List<String>> subRepoToPattern = new HashMap<>();
+        Map<List<String>, List<String>> subReposListToPatterns = repoAndPatterns.stream()
+                .filter(repoAndPattern -> !CollectionUtils.isEmpty(repoAndPattern.getSubRepos()))
+                .collect(Collectors.toMap(RepoAndPattern::getSubRepos, RepoAndPattern::getPatterns));
+        subReposListToPatterns.forEach((subRepos, patterns) -> subRepos.forEach(subRepo -> subRepoToPattern.put(subRepo, patterns)));
+        return subRepoToPattern;
     }
 
     private Map<String, List<String>> getSubRepos() {
