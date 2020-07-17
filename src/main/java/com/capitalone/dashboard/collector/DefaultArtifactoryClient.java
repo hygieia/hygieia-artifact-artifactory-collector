@@ -260,7 +260,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 					}
 					updateBinaryArtifactWithPatternMatchedAttributes(newbinaryArtifact, parsedResult);
 					// Check if matching Binary Artifact already exists
-					BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(artifactItem.getId(),
+					BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
 							newbinaryArtifact.getArtifactVersion());
 					if (Objects.nonNull(existingBinaryArtifact)) {
 						// update existing binary artifact for that version and update timestamp
@@ -383,6 +383,10 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		existingBinaryArtifact.setCollectorItemId(newBinaryArtifact.getCollectorItemId());
 		existingBinaryArtifact.setCanonicalName(newBinaryArtifact.getCanonicalName());
 		existingBinaryArtifact.setArtifactGroupId(newBinaryArtifact.getArtifactGroupId());
+		existingBinaryArtifact.setArtifactVersion(newBinaryArtifact.getArtifactVersion());
+		existingBinaryArtifact.setArtifactName(newBinaryArtifact.getArtifactName());
+		existingBinaryArtifact.setRepo(newBinaryArtifact.getRepo());
+		existingBinaryArtifact.setPath(newBinaryArtifact.getPath());
         existingBinaryArtifact.setType(newBinaryArtifact.getType());
 		existingBinaryArtifact.setCreatedTimeStamp(newBinaryArtifact.getCreatedTimeStamp());
 		existingBinaryArtifact.setCreatedBy(newBinaryArtifact.getCreatedBy());
@@ -711,7 +715,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		}
 	}
 
-	// ////// Helpers
+	// Helpers
 
 	private ResponseEntity<String> makeRestCall(String instanceUrl, String suffix) {
 		ResponseEntity<String> response = null;

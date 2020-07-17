@@ -229,7 +229,7 @@ public class DefaultArtifactoryClientTest {
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
-		when(binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(id, "1")).thenReturn(null);
+		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(null);
 		// binary artifact found with matching collector item id
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(id, new Sort(Sort.Direction.DESC, "timestamp"))).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
@@ -254,7 +254,7 @@ public class DefaultArtifactoryClientTest {
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
 		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "dummy/test-dev/1", repoName, true);
-		when(binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(id, "1")).thenReturn(matchedBA);
+		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(matchedBA);
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
 		assertThat(binaryArtifacts.size(), is(1));
 		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
@@ -296,7 +296,7 @@ public class DefaultArtifactoryClientTest {
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
 		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "dummy/test-dev/1", repoName, true);
-		when(binaryArtifactRepository.findBinaryArtifactByCollectorItemIdAndArtifactVersion(id, "1")).thenReturn(matchedBA);
+		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(matchedBA);
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
 		assertThat(binaryArtifacts.size(), is(1));
 		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
