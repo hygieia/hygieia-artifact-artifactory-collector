@@ -298,10 +298,20 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	}
 
 	private long getLastUpdated(long lastUpdated) {
-		if(lastUpdated > 0) {
-			return lastUpdated;
-		}else{
+		if(lastUpdated == 0) {
 			return System.currentTimeMillis() - artifactorySettings.getOffSet();
+		} else{
+			// unit of time's worth of data
+			TimeUnit unitTime = TimeUnit.valueOf(artifactorySettings.getTimeUnit());
+			// lookback time
+			long lookback = artifactorySettings.getTimeInterval();
+			long currentTime = System.currentTimeMillis();
+			// if lastUpdated is more than 'lookback' days, then set it to 'lookback'
+			if (lastUpdated < (currentTime - unitTime.toMillis(lookback))) {
+				LOGGER.info("Lookback period is -- " + lookback + " " + unitTime.toString());
+				lastUpdated = currentTime - unitTime.toMillis(lookback);
+			}
+			return lastUpdated;
 		}
 	}
 
