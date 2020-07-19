@@ -24,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 import java.nio.charset.StandardCharsets;
@@ -225,12 +226,12 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		try {
 			JSONArray jsonArtifacts = sendPost(start,
 					artifactItem.getRepoName(),
-					artifactItem.getArtifactName(),
+					artifactItem.getPath(),
 					artifactItem.getInstanceUrl(),
 					subRepos);
 			if (Objects.isNull(jsonArtifacts)) {
 				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName()
-						+ " artifactName=" + artifactItem.getArtifactName()
+						+ " path=" + artifactItem.getPath()
 						+ " collectorItemId=" + artifactItem.getId());
 				return binaryArtifacts;
 			}
@@ -315,16 +316,18 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		}
 	}
 
-	private JSONArray sendPost(long start, String repoName, String artifactName, String instanceUrl, List<String> subRepos) throws ParseException {
-		String returnJSON = sendPostQueryByRepo(start, repoName, artifactName, instanceUrl);
+	private JSONArray sendPost(long start, String repoName, String path, String instanceUrl, List<String> subRepos) throws ParseException {
+		String returnJSON = sendPostQueryByRepo(start, repoName, path, instanceUrl);
 		if (Objects.isNull(returnJSON)) return null;
 		JSONParser parser = new JSONParser();
 		JSONArray jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
 		if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
 		// retry post query with subrepo
 		if (CollectionUtils.isEmpty(subRepos)) return null;
+		// remove subRepo from list if matches already queried repoName
+		subRepos.remove(repoName);
         for (String subRepo : subRepos) {
-			returnJSON = sendPostQueryByRepo(start, subRepo, artifactName, instanceUrl);
+			returnJSON = sendPostQueryByRepo(start, subRepo, path, instanceUrl);
 			if (!Objects.isNull(returnJSON)) {
 				jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
 			}
@@ -333,16 +336,22 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		return null;
 	}
 
-	private String sendPostQueryByRepo(long start, String repo, String artifactName, String instanceUrl) {
-		String query = buildQuery(start, repo, artifactName);
+	private String sendPostQueryByRepo(long start, String repo, String path, String instanceUrl) {
+		int retryCount = 0;
+		String query = buildQuery(start, repo, path);
 		LOGGER.info("Artifact Query ==> " + query);
 		ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
+		// retry logic
+		while (Objects.isNull(responseEntity) && retryCount < 1) {
+			responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
+			retryCount++;
+		}
 		if (Objects.isNull(responseEntity)) return null;
 		return responseEntity.getBody();
 	}
 
-	private String buildQuery(long start, String repo,String artifactName){
-		String constructPath = "*/"+artifactName+"/*";
+	private String buildQuery(long start, String repo, String path){
+		String constructPath = path + "/*";
 		String query =  "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(start))
                 + "\"},\"repo\":{\"$eq\":\"" + repo
 				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}})"
@@ -749,10 +758,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			headers.setContentType(contentType);
 			headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
 			response = restClient.makeRestCallPost(url, headers, body);
-
-		} catch (RestClientException re) {
+		} catch (HttpClientErrorException re) {
 			LOGGER.error("Error with REST url: " + url);
-			LOGGER.error(re.getMessage());
+			LOGGER.error(re.getMessage() + ": " + re.getResponseBodyAsString());
 		}
 		return response;
 	}
@@ -785,7 +793,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		if (CollectionUtils.isNotEmpty(servers) && CollectionUtils.isNotEmpty(userNames) && CollectionUtils.isNotEmpty(apiKeys)) {
 			for (int i = 0; i < servers.size(); i++) {
 				ServerSetting serverSetting = servers.get(i);
-				if (serverSetting != null && serverSetting.getUrl().equals(instanceUrl)
+				if (serverSetting != null && serverSetting.getUrl().contains(instanceUrl)
 						&& i < userNames.size() && i < apiKeys.size() && userNames.get(i) != null && apiKeys.get(i) != null) {
 					String userInfo = userNames.get(i) + ":" + apiKeys.get(i);
 					byte[] encodedAuth = Base64.encodeBase64(
