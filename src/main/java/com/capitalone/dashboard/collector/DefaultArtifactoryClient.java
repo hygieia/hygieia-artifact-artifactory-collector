@@ -206,7 +206,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 								insertOrUpdateBaseArtifact(baseArtifacts, artifactItem, suspect, bas);
 							}
 						} catch (Exception e) {
-							LOGGER.error("Received Exception= " + e.toString() + " artifactPath=" + artifactPath, e);
+							LOGGER.error("Received Exception= " + e.getMessage() + " artifactPath=" + artifactPath, e);
 						}
 						count++;
 						LOGGER.info("artifact count -- " + count + " repo=" + repoName + "  artifactPath=" + artifactPath);
