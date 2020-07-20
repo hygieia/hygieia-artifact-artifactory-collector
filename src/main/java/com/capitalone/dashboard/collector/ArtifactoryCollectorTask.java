@@ -187,7 +187,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         LOGGER.info("Total Enabled Artifact Items -- " + enabledArtifactItems.size());
         for (ArtifactItem artifactItem: enabledArtifactItems) {
             List<String> patterns = getPattern(artifactItem.getRepoName());
-            List<String> subRepos = getAssociatedSubRepos(artifactItem.getRepoName());
+            ArrayList<String> subRepos = new ArrayList<>(getAssociatedSubRepos(artifactItem.getRepoName()));
             if(Objects.isNull(patterns)){
                 LOGGER.error("patterns null for repo name " + artifactItem.getRepoName());
             } else {

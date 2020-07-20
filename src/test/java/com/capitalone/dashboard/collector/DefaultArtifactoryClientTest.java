@@ -288,7 +288,7 @@ public class DefaultArtifactoryClientTest {
 		ArtifactItem ai = createArtifactItem(id, "test-dev", instanceUrl, repoName);
 		List<String> patterns = new ArrayList<>();
 		patterns.add(ArtifactUtilTest.ARTIFACT_PATTERN);
-		List<String> subRepos = settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos();
+		ArrayList<String> subRepos = new ArrayList<>(settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos());
 
 		// first call returns empty results, then returns response with subrepo
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
