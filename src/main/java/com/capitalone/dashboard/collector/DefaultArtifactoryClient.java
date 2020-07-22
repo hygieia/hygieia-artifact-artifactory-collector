@@ -219,7 +219,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		return baseArtifacts;
 	}
 
-	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns, List<String> subRepos){
+	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns){
         long start = getLastUpdated(artifactItem.getLastUpdated());
 		List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
 
@@ -227,8 +227,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			JSONArray jsonArtifacts = sendPost(start,
 					artifactItem.getRepoName(),
 					artifactItem.getPath(),
-					artifactItem.getInstanceUrl(),
-					subRepos);
+					artifactItem.getInstanceUrl());
 			if (Objects.isNull(jsonArtifacts)) {
 				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName()
 						+ " path=" + artifactItem.getPath()
@@ -273,6 +272,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						// save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
 						binaryArtifactRepository.save(newbinaryArtifact);
 					}
+
 					count++;
 					LOGGER.info("json artifact count -- " + count
 							+ " repo=" + artifactItem.getRepoName()
@@ -316,35 +316,22 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		}
 	}
 
-	private JSONArray sendPost(long start, String repoName, String path, String instanceUrl, List<String> subRepos) throws ParseException {
+	private JSONArray sendPost(long start, String repoName, String path, String instanceUrl) throws ParseException {
 		String returnJSON = sendPostQueryByRepo(start, repoName, path, instanceUrl);
 		if (Objects.isNull(returnJSON)) return null;
 		JSONParser parser = new JSONParser();
 		JSONArray jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
 		if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
-		// retry post query with subrepo
-		if (CollectionUtils.isEmpty(subRepos)) return null;
-		// remove subRepo from list if matches already queried repoName
-		subRepos.remove(repoName);
-        for (String subRepo : subRepos) {
-			returnJSON = sendPostQueryByRepo(start, subRepo, path, instanceUrl);
-			if (!Objects.isNull(returnJSON)) {
-				jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
-			}
-			if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
-		}
 		return null;
 	}
 
 	private String sendPostQueryByRepo(long start, String repo, String path, String instanceUrl) {
-		int retryCount = 0;
 		String query = buildQuery(start, repo, path);
 		LOGGER.info("Artifact Query ==> " + query);
 		ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
-		// retry logic
-		while (Objects.isNull(responseEntity) && retryCount < 1) {
+		// retry if first time fails
+		if (Objects.isNull(responseEntity)) {
 			responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
-			retryCount++;
 		}
 		if (Objects.isNull(responseEntity)) return null;
 		return responseEntity.getBody();
