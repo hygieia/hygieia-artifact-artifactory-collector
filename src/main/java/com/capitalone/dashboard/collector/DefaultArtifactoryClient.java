@@ -24,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 import java.nio.charset.StandardCharsets;
@@ -205,7 +206,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 								insertOrUpdateBaseArtifact(baseArtifacts, artifactItem, suspect, bas);
 							}
 						} catch (Exception e) {
-							LOGGER.error("Received Exception= " + e.toString() + " artifactPath=" + artifactPath, e);
+							LOGGER.error("Received Exception= " + e.getMessage() + " artifactPath=" + artifactPath, e);
 						}
 						count++;
 						LOGGER.info("artifact count -- " + count + " repo=" + repoName + "  artifactPath=" + artifactPath);
@@ -218,19 +219,18 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		return baseArtifacts;
 	}
 
-	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns, List<String> subRepos){
+	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns){
         long start = getLastUpdated(artifactItem.getLastUpdated());
 		List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
 
 		try {
 			JSONArray jsonArtifacts = sendPost(start,
 					artifactItem.getRepoName(),
-					artifactItem.getArtifactName(),
-					artifactItem.getInstanceUrl(),
-					subRepos);
+					artifactItem.getPath(),
+					artifactItem.getInstanceUrl());
 			if (Objects.isNull(jsonArtifacts)) {
 				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName()
-						+ " artifactName=" + artifactItem.getArtifactName()
+						+ " path=" + artifactItem.getPath()
 						+ " collectorItemId=" + artifactItem.getId());
 				return binaryArtifacts;
 			}
@@ -272,6 +272,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 						// save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
 						binaryArtifactRepository.save(newbinaryArtifact);
 					}
+
 					count++;
 					LOGGER.info("json artifact count -- " + count
 							+ " repo=" + artifactItem.getRepoName()
@@ -298,41 +299,46 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	}
 
 	private long getLastUpdated(long lastUpdated) {
-		if(lastUpdated > 0) {
-			return lastUpdated;
-		}else{
+		if(lastUpdated == 0) {
 			return System.currentTimeMillis() - artifactorySettings.getOffSet();
+		} else{
+			// unit of time's worth of data
+			TimeUnit unitTime = TimeUnit.valueOf(artifactorySettings.getTimeUnit());
+			// lookback time
+			long lookback = artifactorySettings.getTimeInterval();
+			long currentTime = System.currentTimeMillis();
+			// if lastUpdated is more than 'lookback' days, then set it to 'lookback'
+			if (lastUpdated < (currentTime - unitTime.toMillis(lookback))) {
+				LOGGER.info("Lookback period is -- " + lookback + " " + unitTime.toString());
+				lastUpdated = currentTime - unitTime.toMillis(lookback);
+			}
+			return lastUpdated;
 		}
 	}
 
-	private JSONArray sendPost(long start, String repoName, String artifactName, String instanceUrl, List<String> subRepos) throws ParseException {
-		String returnJSON = sendPostQueryByRepo(start, repoName, artifactName, instanceUrl);
+	private JSONArray sendPost(long start, String repoName, String path, String instanceUrl) throws ParseException {
+		String returnJSON = sendPostQueryByRepo(start, repoName, path, instanceUrl);
 		if (Objects.isNull(returnJSON)) return null;
 		JSONParser parser = new JSONParser();
 		JSONArray jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
 		if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
-		// retry post query with subrepo
-		if (CollectionUtils.isEmpty(subRepos)) return null;
-        for (String subRepo : subRepos) {
-			returnJSON = sendPostQueryByRepo(start, subRepo, artifactName, instanceUrl);
-			if (!Objects.isNull(returnJSON)) {
-				jsonArtifacts = parseJsonArtifacts(parser, returnJSON);
-			}
-			if (!jsonArtifacts.isEmpty()) return jsonArtifacts;
-		}
 		return null;
 	}
 
-	private String sendPostQueryByRepo(long start, String repo, String artifactName, String instanceUrl) {
-		String query = buildQuery(start, repo, artifactName);
+	private String sendPostQueryByRepo(long start, String repo, String path, String instanceUrl) {
+		String query = buildQuery(start, repo, path);
 		LOGGER.info("Artifact Query ==> " + query);
 		ResponseEntity<String> responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
+		// retry if first time fails
+		if (Objects.isNull(responseEntity)) {
+			responseEntity = makeRestPost(instanceUrl, AQL_URL_SUFFIX, MediaType.TEXT_PLAIN, query);
+		}
 		if (Objects.isNull(responseEntity)) return null;
 		return responseEntity.getBody();
 	}
 
-	private String buildQuery(long start, String repo,String artifactName){
-		String constructPath = "*/"+artifactName+"/*";
+	private String buildQuery(long start, String repo, String path){
+		String constructPath = path + "/*";
 		String query =  "items.find({\"created\" : {\"$gt\" : \"" + FULL_DATE.format(new Date(start))
                 + "\"},\"repo\":{\"$eq\":\"" + repo
 				+ "\"},\"path\":{\"$match\":\""+constructPath+"\"}})"
@@ -739,10 +745,9 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			headers.setContentType(contentType);
 			headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
 			response = restClient.makeRestCallPost(url, headers, body);
-
-		} catch (RestClientException re) {
+		} catch (HttpClientErrorException re) {
 			LOGGER.error("Error with REST url: " + url);
-			LOGGER.error(re.getMessage());
+			LOGGER.error(re.getMessage() + ": " + re.getResponseBodyAsString());
 		}
 		return response;
 	}
@@ -775,7 +780,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		if (CollectionUtils.isNotEmpty(servers) && CollectionUtils.isNotEmpty(userNames) && CollectionUtils.isNotEmpty(apiKeys)) {
 			for (int i = 0; i < servers.size(); i++) {
 				ServerSetting serverSetting = servers.get(i);
-				if (serverSetting != null && serverSetting.getUrl().equals(instanceUrl)
+				if (serverSetting != null && serverSetting.getUrl().contains(instanceUrl)
 						&& i < userNames.size() && i < apiKeys.size() && userNames.get(i) != null && apiKeys.get(i) != null) {
 					String userInfo = userNames.get(i) + ":" + apiKeys.get(i);
 					byte[] encodedAuth = Base64.encodeBase64(

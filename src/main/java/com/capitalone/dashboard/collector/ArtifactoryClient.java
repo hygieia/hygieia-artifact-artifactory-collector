@@ -33,5 +33,6 @@ public interface ArtifactoryClient {
 
     List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated);
 
-    List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem, List<String> pattern, List<String> subRepos);
+    List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem, List<String> pattern);
+
 }

@@ -232,7 +232,7 @@ public class DefaultArtifactoryClientTest {
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(null);
 		// binary artifact found with matching collector item id
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(id, new Sort(Sort.Direction.DESC, "timestamp"))).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
+		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(0));
 	}
 
@@ -255,7 +255,7 @@ public class DefaultArtifactoryClientTest {
 
 		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "dummy/test-dev/1", repoName, true);
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(matchedBA);
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
+		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(1));
 		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
 		assertThat(binaryArtifacts.get(0).getCanonicalName(),is("manifest.json"));
@@ -269,50 +269,6 @@ public class DefaultArtifactoryClientTest {
 		assertThat(binaryArtifacts.get(0).getCreatedBy(),is("robot"));
 		assertThat(binaryArtifacts.get(0).getCreatedTimeStamp(),is(FULL_DATE.parse("2018-10-11T14:27:16.031Z").getTime()));
 		assertThat(binaryArtifacts.get(0).getArtifactVersion(),is("1"));
-		assertThat(binaryArtifacts.get(0).getVirtualRepos(), is(Arrays.asList("docker-managed")));
-	}
-
-	// test get artifacts querying sub repo
-	@Test
-	public void testGetArtifactsQueryingSubRepo() throws Exception {
-		String instanceUrl = "http://localhost:8081/artifactory/";
-		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
-		String repoName = "sub-repo-1";
-		String emptyResponse = getJson("emptyArtifacts.json");
-		Map<String, String> fieldsToUpdate = new HashMap<>();
-		fieldsToUpdate.put("repo", repoName);
-		String response = updateJsonArtifactFields("binaryArtifacts.json", fieldsToUpdate);
-		ObjectId id = ObjectId.get();
-
-		// artifact item
-		ArtifactItem ai = createArtifactItem(id, "test-dev", instanceUrl, repoName);
-		List<String> patterns = new ArrayList<>();
-		patterns.add(ArtifactUtilTest.ARTIFACT_PATTERN);
-		List<String> subRepos = settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos();
-
-		// first call returns empty results, then returns response with subrepo
-		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
-				.thenReturn(new ResponseEntity<>(emptyResponse, HttpStatus.OK))
-				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
-
-		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "dummy/test-dev/1", repoName, true);
-		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(matchedBA);
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
-		assertThat(binaryArtifacts.size(), is(1));
-		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
-		assertThat(binaryArtifacts.get(0).getCanonicalName(),is("manifest.json"));
-		assertThat(binaryArtifacts.get(0).getArtifactGroupId(),is("dummy"));
-		assertThat(binaryArtifacts.get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
-		assertThat(binaryArtifacts.get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
-		assertThat(binaryArtifacts.get(0).getArtifactExtension(),is("json"));
-		assertThat(binaryArtifacts.get(0).getType(),is("file"));
-		assertThat(binaryArtifacts.get(0).getModifiedBy(),is("robot"));
-		assertThat(binaryArtifacts.get(0).getModifiedTimeStamp(),is(FULL_DATE.parse("2018-10-11T14:38:56.471Z").getTime()));
-		assertThat(binaryArtifacts.get(0).getCreatedBy(),is("robot"));
-		assertThat(binaryArtifacts.get(0).getCreatedTimeStamp(),is(FULL_DATE.parse("2018-10-11T14:27:16.031Z").getTime()));
-		assertThat(binaryArtifacts.get(0).getArtifactVersion(),is("1"));
-		assertThat(binaryArtifacts.get(0).getRepo(),is("sub-repo-1"));
-		assertThat(binaryArtifacts.get(0).getPath(),is("dummy/test-dev/1"));
 		assertThat(binaryArtifacts.get(0).getVirtualRepos(), is(Arrays.asList("docker-managed")));
 	}
 
@@ -329,12 +285,11 @@ public class DefaultArtifactoryClientTest {
 		List<String> patterns = new ArrayList<>();
 		patterns.add(ArtifactUtilTest.MISC_PATTERN1);
 		patterns.add(ArtifactUtilTest.MISC_PATTERN2);
-		List<String> subRepos = settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos();
 
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
+		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(0));
 	}
 
@@ -352,12 +307,11 @@ public class DefaultArtifactoryClientTest {
 		ArtifactItem ai = createArtifactItem(id, "test-dev", instanceUrl, repoName);
 		List<String> patterns = new ArrayList<>();
 		patterns.add(ArtifactUtilTest.ARTIFACT_PATTERN);
-		List<String> subRepos = settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos();
 
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
+		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(0));
 	}
 
@@ -373,13 +327,12 @@ public class DefaultArtifactoryClientTest {
 		ArtifactItem ai = createArtifactItem(id, "test-dev", instanceUrl, repoName);
 		List<String> patterns = new ArrayList<>();
 		patterns.add(ArtifactUtilTest.ARTIFACT_PATTERN);
-		List<String> subRepos = settings.getServers().get(0).getRepoAndPatterns().get(0).getSubRepos();
 
 		// invalid path returns no results
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(emptyResponse, HttpStatus.OK));
 
-		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns, subRepos);
+		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(0));
 	}
 
