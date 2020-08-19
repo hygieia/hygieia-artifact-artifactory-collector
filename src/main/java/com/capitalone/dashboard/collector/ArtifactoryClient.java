@@ -1,11 +1,13 @@
 package com.capitalone.dashboard.collector;
 
 import java.util.List;
+import java.util.Map;
 
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
 import com.capitalone.dashboard.model.BinaryArtifact;
+import com.capitalone.dashboard.model.Collector;
 
 /**
  * Client for fetching artifacts information from Artifactory
@@ -34,5 +36,7 @@ public interface ArtifactoryClient {
     List<BaseArtifact> getArtifactItems(String instanceUrl, String repoName,String pattern, long lastUpdated);
 
     List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem, List<String> pattern);
+
+    Map<ArtifactItem,List<BinaryArtifact>> getLatestBinaryArtifacts(Collector collector, List<String> patterns, String instanceUrl, String repo);
 
 }

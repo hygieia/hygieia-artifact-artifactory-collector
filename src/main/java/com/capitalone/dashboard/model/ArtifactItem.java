@@ -8,6 +8,17 @@ public class ArtifactItem extends CollectorItem {
     public static final String ARTIFACT_NAME = "artifactName";
     public static final String PATH ="path";
 
+    public ArtifactItem(String repoName,String artifactName, String path, String instanceUrl){
+        this.setRepoName(repoName);
+        this.setArtifactName(artifactName);
+        this.setPath(path);
+        this.setInstanceUrl(instanceUrl);
+    }
+
+    public ArtifactItem() {
+
+    }
+
     public String getInstanceUrl() {
         return (String) getOptions().get(INSTANCE_URL);
     }
