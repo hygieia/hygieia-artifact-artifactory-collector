@@ -28,6 +28,7 @@ import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -179,32 +180,62 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     }
 
     protected  void collectHybridMode(ArtifactoryCollector collector){
-        // find all enabled artifactory collector-items
         long start = System.currentTimeMillis();
         AtomicInteger count = new AtomicInteger();
         if (Objects.isNull(collector)) return;
+        String instanceUrl = artifactorySettings.getServers().get(0).getUrl();
         List<ArtifactItem> enabledArtifactItems = artifactItemRepository.findEnabledArtifactItems(collector.getId());
-        LOGGER.info("Total Enabled Artifact Items -- " + enabledArtifactItems.size());
-        for (ArtifactItem artifactItem: enabledArtifactItems) {
-            List<String> patterns = getPattern(artifactItem.getRepoName());
-            if (Objects.isNull(patterns)) {
-                LOGGER.error("patterns null for repo name " + artifactItem.getRepoName());
-            } else {
-                List<BinaryArtifact> binaryArtifacts = artifactoryClient.getArtifacts(artifactItem, patterns);
-                if (!CollectionUtils.isEmpty(binaryArtifacts)) {
-                    binaryArtifactRepository.save(binaryArtifacts);
+        LOGGER.info("Total enabled artifactItems=" + enabledArtifactItems.size());
+        getRepos().forEach(repo -> {
+            int counter = 0;
+            Map<ArtifactItem,List<BinaryArtifact>> processing = artifactoryClient.getLatestBinaryArtifacts(collector,getPattern(repo),instanceUrl,repo);
+            for (ArtifactItem artifactItem: enabledArtifactItems) {
+                if(processing.keySet().contains(artifactItem)){
+                    List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
+                    for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
+                        BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
+                                newBinaryArtifact.getArtifactVersion());
+                        if (Objects.nonNull(existingBinaryArtifact)) {
+                            // update existing binary artifact for that version and update timestamp
+                            updateExistingBinaryArtifact(newBinaryArtifact, existingBinaryArtifact);
+                            binaryArtifactRepository.save(newBinaryArtifact);
+                        } else {
+                            // get latest binary artifact for this artifact item with build info
+                            attachLatestBuildInfo(artifactItem, newBinaryArtifact);
+                            // save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
+                            binaryArtifactRepository.save(newBinaryArtifact);
+                        }
+                    }
+                    artifactItem.setLastUpdated(System.currentTimeMillis());
+                    artifactItemRepository.save(artifactItem);
+                    count.getAndIncrement();
+                    counter++;
                 }
-                artifactItem.setLastUpdated(System.currentTimeMillis());
-                artifactItemRepository.save(artifactItem);
-                count.getAndIncrement();
-                LOGGER.info("artifact item count ---" + count);
             }
-        }
-        log("Completed run ++ -" + start + "count --"+ count);
+            LOGGER.info("updated artifacts for repo=" + repo+", updatedCount="+counter);
+        });
+        long end = System.currentTimeMillis();
+        long elapsedTime = (end-start) / 1000;
+        LOGGER.info(String.format("ArtifactoryCollectorTask:collect stop, totalProcessSeconds=%d,  totalEnabledArtifacts=%d, totalUpdatedArtifacts=%d",
+                elapsedTime, enabledArtifactItems.size(), count.get()));
         collector.setLastExecuted(start);
         artifactoryCollectorRepository.save(collector);
     }
 
+    private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
+        // update all fields except build infos
+        if(!org.apache.commons.collections.CollectionUtils.isEmpty(existingBinaryArtifact.getBuildInfos())){
+            newBinaryArtifact.setBuildInfos(existingBinaryArtifact.getBuildInfos());
+        }
+    }
+
+
+    private void attachLatestBuildInfo(ArtifactItem artifactItem, BinaryArtifact binaryArtifact) {
+        // get latest binary artifact associated with the artifact item by desc timestamp
+        BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), new Sort(Sort.Direction.DESC, "timestamp"));
+        if (Objects.isNull(latestWithBuildInfo)) return;
+        binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
+    }
     private List<String> getPattern(String repoName){
         if(Objects.isNull(repoName)) return null;
         List<String> pattern =  getRepoAndSubRepoPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
@@ -467,6 +498,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                 .filter(repoAndPattern -> !CollectionUtils.isEmpty(repoAndPattern.getSubRepos()))
                 .collect(Collectors.toMap(RepoAndPattern::getRepo, RepoAndPattern::getSubRepos));
     }
+
 
     private long getLastUpdated(Collector collector) {
         if(!Objects.isNull(collector.getLastExecuted())) {
