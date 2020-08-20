@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 
 @Component
 public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<ArtifactoryCollector> {
+    public static final String SLASH = "/";
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtifactoryCollectorTask.class);
     private static final int ARTIFACT_GROUP = 1;
     private static final int ARTIFACT_NAME = 2;
@@ -257,16 +258,16 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     private String truncate(String name){
         name = removeLeadAndTrailingSlash(name);
-        if(name.indexOf("/") > 0){
-            return name.substring(0, name.indexOf("/"));
+        if(name.indexOf(SLASH) > 0){
+            return name.substring(0, name.indexOf(SLASH));
         }
         return name;
     }
 
     private String normalizePath(String path, String repoName){
         path = removeLeadAndTrailingSlash(path);
-        if(path.indexOf("/") > 0) return path;
-        return repoName+"/"+path;
+        if(path.indexOf(SLASH) > 0) return path;
+        return repoName+ SLASH +path;
     }
 
     private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
@@ -561,7 +562,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         genericCollectorItems.forEach(gci -> {
             String capture = capturePattern(gci,ARTIFACT_NAME).trim();
             String captureGroupId = capturePattern(gci,ARTIFACT_GROUP).trim();
-            String capturePath = captureGroupId+"/"+capture;
+            String capturePath = captureGroupId+ SLASH +capture;
             if (StringUtils.isEmpty(capture)) {
                 return;
             }
