@@ -46,9 +46,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<ArtifactoryCollector> {
+    public static final String SLASH = "/";
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtifactoryCollectorTask.class);
     private static final int ARTIFACT_GROUP = 1;
     private static final int ARTIFACT_NAME = 2;
@@ -182,6 +184,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     protected  void collectHybridMode(ArtifactoryCollector collector){
         long start = System.currentTimeMillis();
         AtomicInteger count = new AtomicInteger();
+        Map<String, List<String>> subRepoMap = getSubRepos();
         if (Objects.isNull(collector)) return;
         String instanceUrl = artifactorySettings.getServers().get(0).getUrl();
         List<ArtifactItem> enabledArtifactItems = artifactItemRepository.findEnabledArtifactItems(collector.getId());
@@ -190,7 +193,13 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             int counter = 0;
             Map<ArtifactItem,List<BinaryArtifact>> processing = artifactoryClient.getLatestBinaryArtifacts(collector,getPattern(repo),instanceUrl,repo);
             for (ArtifactItem artifactItem: enabledArtifactItems) {
+                normalize(artifactItem);
+                String rootRepoName = replaceSubRepos(artifactItem.getRepoName(),subRepoMap);
+                if(Objects.nonNull(rootRepoName)){
+                    artifactItem.setRepoName(rootRepoName);
+                }
                 if(processing.keySet().contains(artifactItem)){
+                    LOGGER.info("processing artifact=" + artifactItem.getArtifactName()+", repo="+artifactItem.getRepoName());
                     List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
                     for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
                         BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
@@ -220,6 +229,45 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                 elapsedTime, enabledArtifactItems.size(), count.get()));
         collector.setLastExecuted(start);
         artifactoryCollectorRepository.save(collector);
+    }
+
+    private String replaceSubRepos(String repoName,Map<String,List<String>> subRepoMap){
+        if(subRepoMap.containsKey(repoName)) return repoName;
+         Map.Entry found = subRepoMap.entrySet().stream().filter(entry-> !CollectionUtils.isEmpty(entry.getValue()) && entry.getValue().contains(repoName)).filter(Objects::nonNull).findFirst().orElse(null);
+         if(Objects.nonNull(found)) return (String) found.getKey();
+         return null;
+    }
+
+    private ArtifactItem normalize(ArtifactItem artifactItem){
+        artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
+        artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
+        artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
+        artifactItem.setPath(normalizePath(artifactItem.getPath(),artifactItem.getRepoName()));
+        return  artifactItem;
+    }
+
+    private String removeLeadAndTrailingSlash(String path){
+        path = removeSlash(path, "/+$");
+        path = removeSlash(path, "^/+");
+        return path;
+    }
+
+    private String removeSlash(String path, String s) {
+        return path.replaceAll(s, "");
+    }
+
+    private String truncate(String name){
+        name = removeLeadAndTrailingSlash(name);
+        if(name.indexOf(SLASH) > 0){
+            return name.substring(0, name.indexOf(SLASH));
+        }
+        return name;
+    }
+
+    private String normalizePath(String path, String repoName){
+        path = removeLeadAndTrailingSlash(path);
+        if(path.indexOf(SLASH) > 0) return path;
+        return repoName+ SLASH +path;
     }
 
     private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
@@ -514,7 +562,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         genericCollectorItems.forEach(gci -> {
             String capture = capturePattern(gci,ARTIFACT_NAME).trim();
             String captureGroupId = capturePattern(gci,ARTIFACT_GROUP).trim();
-            String capturePath = captureGroupId+"/"+capture;
+            String capturePath = captureGroupId+ SLASH +capture;
             if (StringUtils.isEmpty(capture)) {
                 return;
             }
