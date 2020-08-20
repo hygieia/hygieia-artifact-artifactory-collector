@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<ArtifactoryCollector> {
@@ -182,6 +183,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     protected  void collectHybridMode(ArtifactoryCollector collector){
         long start = System.currentTimeMillis();
         AtomicInteger count = new AtomicInteger();
+        Map<String, List<String>> subRepoMap = getSubRepos();
         if (Objects.isNull(collector)) return;
         String instanceUrl = artifactorySettings.getServers().get(0).getUrl();
         List<ArtifactItem> enabledArtifactItems = artifactItemRepository.findEnabledArtifactItems(collector.getId());
@@ -190,7 +192,13 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             int counter = 0;
             Map<ArtifactItem,List<BinaryArtifact>> processing = artifactoryClient.getLatestBinaryArtifacts(collector,getPattern(repo),instanceUrl,repo);
             for (ArtifactItem artifactItem: enabledArtifactItems) {
+                normalize(artifactItem);
+                String rootRepoName = replaceSubRepos(artifactItem.getRepoName(),subRepoMap);
+                if(Objects.nonNull(rootRepoName)){
+                    artifactItem.setRepoName(rootRepoName);
+                }
                 if(processing.keySet().contains(artifactItem)){
+                    LOGGER.info("processing artifact=" + artifactItem.getArtifactName()+", repo="+artifactItem.getRepoName());
                     List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
                     for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
                         BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
@@ -220,6 +228,45 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                 elapsedTime, enabledArtifactItems.size(), count.get()));
         collector.setLastExecuted(start);
         artifactoryCollectorRepository.save(collector);
+    }
+
+    private String replaceSubRepos(String repoName,Map<String,List<String>> subRepoMap){
+        if(subRepoMap.containsKey(repoName)) return repoName;
+         Map.Entry found = subRepoMap.entrySet().stream().filter(entry-> !CollectionUtils.isEmpty(entry.getValue()) && entry.getValue().contains(repoName)).filter(Objects::nonNull).findFirst().orElse(null);
+         if(Objects.nonNull(found)) return (String) found.getKey();
+         return null;
+    }
+
+    private static ArtifactItem normalize(ArtifactItem artifactItem){
+        artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
+        artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
+        artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
+        artifactItem.setPath(normalizePath(artifactItem.getPath(),artifactItem.getRepoName()));
+        return  artifactItem;
+    }
+
+    private static String removeLeadAndTrailingSlash(String path){
+        path = removeSlash(path, "/+$");
+        path = removeSlash(path, "^/+");
+        return path;
+    }
+
+    private static String removeSlash(String path, String s) {
+        return path.replaceAll(s, "");
+    }
+
+    private static String truncate(String name){
+        name = removeLeadAndTrailingSlash(name);
+        if(name.indexOf("/") > 0){
+            return name.substring(0, name.indexOf("/"));
+        }
+        return name;
+    }
+
+    private static String normalizePath(String path, String repoName){
+        path = removeLeadAndTrailingSlash(path);
+        if(path.indexOf("/") > 0) return path;
+        return repoName+"/"+path;
     }
 
     private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
