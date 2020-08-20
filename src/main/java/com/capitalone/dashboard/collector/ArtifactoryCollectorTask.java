@@ -237,7 +237,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
          return null;
     }
 
-    private static ArtifactItem normalize(ArtifactItem artifactItem){
+    private ArtifactItem normalize(ArtifactItem artifactItem){
         artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
         artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
         artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
@@ -245,17 +245,17 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         return  artifactItem;
     }
 
-    private static String removeLeadAndTrailingSlash(String path){
+    private String removeLeadAndTrailingSlash(String path){
         path = removeSlash(path, "/+$");
         path = removeSlash(path, "^/+");
         return path;
     }
 
-    private static String removeSlash(String path, String s) {
+    private String removeSlash(String path, String s) {
         return path.replaceAll(s, "");
     }
 
-    private static String truncate(String name){
+    private String truncate(String name){
         name = removeLeadAndTrailingSlash(name);
         if(name.indexOf("/") > 0){
             return name.substring(0, name.indexOf("/"));
@@ -263,7 +263,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         return name;
     }
 
-    private static String normalizePath(String path, String repoName){
+    private String normalizePath(String path, String repoName){
         path = removeLeadAndTrailingSlash(path);
         if(path.indexOf("/") > 0) return path;
         return repoName+"/"+path;
