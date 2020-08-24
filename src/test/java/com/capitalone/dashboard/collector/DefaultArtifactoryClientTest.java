@@ -1,6 +1,8 @@
 package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.client.RestClient;
+import com.capitalone.dashboard.client.RestClientSettings;
+import com.capitalone.dashboard.client.RestOperationsSupplier;
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
@@ -10,7 +12,6 @@ import com.capitalone.dashboard.model.RepoAndPattern;
 import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtilTest;
-import com.capitalone.dashboard.util.Supplier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.bson.types.ObjectId;
@@ -43,7 +44,8 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultArtifactoryClientTest {
-	@Mock private Supplier<RestOperations> restOperationsSupplier;
+	@Mock private RestClientSettings restClientSettings;
+	@Mock private RestOperationsSupplier restOperationsSupplier;
     @Mock private RestOperations rest;
     @Mock private ArtifactorySettings settings;
     @Mock private BinaryArtifactRepository binaryArtifactRepository;
@@ -54,7 +56,7 @@ public class DefaultArtifactoryClientTest {
     
     @Before
     public void init() {
-    	when(restOperationsSupplier.get()).thenReturn(rest);
+    	when(restOperationsSupplier.get(restClientSettings)).thenReturn(rest);
         settings = new ArtifactorySettings();
         ServerSetting serverSetting = new ServerSetting();
 		serverSetting.setUrl("http://localhost:8081/artifactory");
@@ -65,7 +67,7 @@ public class DefaultArtifactoryClientTest {
         settings.setServers(Collections.singletonList(serverSetting));
         settings.setTimeInterval(3);
         settings.setTimeUnit("DAYS");
-        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier),binaryArtifactRepository);
+        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier, restClientSettings),binaryArtifactRepository);
     }
     
     @Test
