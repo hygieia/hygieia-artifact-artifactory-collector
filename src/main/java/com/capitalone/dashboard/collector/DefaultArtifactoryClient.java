@@ -357,7 +357,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 				LOGGER.info("Lookback period is -- " + lookback + " " + unitTime.toString());
 				lastUpdated = currentTime - unitTime.toMillis(lookback);
 			}
-			return lastUpdated;
+			return lastUpdated - artifactorySettings.getOffSet();
 		}
 	}
 
