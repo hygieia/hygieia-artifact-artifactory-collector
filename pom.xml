@@ -53,6 +53,7 @@
     <repository.name>hygieia-artifact-artifactory-collector</repository.name>
     <apache.rat.plugin.version>0.13</apache.rat.plugin.version>
     <com.capitalone.dashboard.core.version>3.10.0</com.capitalone.dashboard.core.version>
+    <commons-codec.version>1.14</commons-codec.version>
     <coveralls.maven.plugin.version>4.3.0</coveralls.maven.plugin.version>
     <developmentTeam>The Hygieia Team</developmentTeam>
     <jacoco.maven.plugin.version>0.8.3</jacoco.maven.plugin.version>
@@ -120,38 +121,6 @@
       <groupId>com.capitalone.dashboard</groupId>
       <artifactId>core</artifactId>
       <version>${com.capitalone.dashboard.core.version}</version>
-    </dependency>
-<!--    <dependency>-->
-<!--      <groupId>com.google.guava</groupId>-->
-<!--      <artifactId>guava</artifactId>-->
-<!--    </dependency>-->
-    <dependency>
-      <groupId>com.googlecode.json-simple</groupId>
-      <artifactId>json-simple</artifactId>
-    </dependency>
-<!--    <dependency>-->
-<!--      <groupId>commons-codec</groupId>-->
-<!--      <artifactId>commons-codec</artifactId>-->
-<!--      <version>1.9</version>-->
-<!--    </dependency>-->
-<!--    <dependency>-->
-<!--      <groupId>commons-io</groupId>-->
-<!--      <artifactId>commons-io</artifactId>-->
-<!--      <version>2.4</version>-->
-<!--      <scope>test</scope>-->
-<!--    </dependency>-->
-<!--    <dependency>-->
-<!--      <groupId>org.apache.commons</groupId>-->
-<!--      <artifactId>commons-lang3</artifactId>-->
-<!--      <version>3.6</version>-->
-<!--    </dependency>-->
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
