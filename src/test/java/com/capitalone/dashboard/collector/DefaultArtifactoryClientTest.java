@@ -1,7 +1,6 @@
 package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.client.RestClient;
-import com.capitalone.dashboard.client.RestClientSettings;
 import com.capitalone.dashboard.client.RestOperationsSupplier;
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
@@ -44,7 +43,6 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultArtifactoryClientTest {
-	@Mock private RestClientSettings restClientSettings;
 	@Mock private RestOperationsSupplier restOperationsSupplier;
     @Mock private RestOperations rest;
     @Mock private ArtifactorySettings settings;
@@ -56,8 +54,8 @@ public class DefaultArtifactoryClientTest {
     
     @Before
     public void init() {
-    	when(restOperationsSupplier.get(restClientSettings)).thenReturn(rest);
-        settings = new ArtifactorySettings();
+		settings = new ArtifactorySettings();
+    	when(restOperationsSupplier.get(settings)).thenReturn(rest);
         ServerSetting serverSetting = new ServerSetting();
 		serverSetting.setUrl("http://localhost:8081/artifactory");
 		RepoAndPattern r = new RepoAndPattern();
@@ -67,7 +65,7 @@ public class DefaultArtifactoryClientTest {
         settings.setServers(Collections.singletonList(serverSetting));
         settings.setTimeInterval(3);
         settings.setTimeUnit("DAYS");
-        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier, restClientSettings),binaryArtifactRepository);
+        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier, settings),binaryArtifactRepository);
     }
     
     @Test
