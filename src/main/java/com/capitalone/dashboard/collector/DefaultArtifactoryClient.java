@@ -6,12 +6,14 @@ import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
 import com.capitalone.dashboard.model.BinaryArtifact;
 import com.capitalone.dashboard.model.Collector;
+import com.capitalone.dashboard.model.RepoAndPattern;
 import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtil;
 import com.google.gson.JsonArray;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONArray;
@@ -360,6 +362,36 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 			return lastUpdated - artifactorySettings.getOffSet();
 		}
 	}
+
+	public List<String> getPattern(String repoName){
+		if(Objects.isNull(repoName)) return null;
+		List<String> pattern =  getRepoAndSubRepoPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
+		if (org.springframework.util.CollectionUtils.isEmpty(pattern)) return null;
+		return pattern;
+	}
+
+	private Map<String, List<String>> getRepoAndSubRepoPatterns() {
+		Map<String, List<String>> patterns = new HashedMap();
+		artifactorySettings.getServers().forEach(serverSetting -> {
+			patterns.putAll(getRepoAndPatternsForServ(serverSetting.getRepoAndPatterns()));
+			patterns.putAll(getSubRepoPatternsForServ(serverSetting.getRepoAndPatterns()));
+		});
+		return patterns;
+	}
+
+	private Map<String, List<String>> getRepoAndPatternsForServ(List<RepoAndPattern> repoAndPatterns) {
+		return repoAndPatterns.stream().collect(Collectors.toMap(RepoAndPattern::getRepo, RepoAndPattern::getPatterns));
+	}
+
+	private Map<String, List<String>> getSubRepoPatternsForServ(List<RepoAndPattern> repoAndPatterns) {
+		Map<String, List<String>> subRepoToPattern = new HashMap<>();
+		Map<List<String>, List<String>> subReposListToPatterns = repoAndPatterns.stream()
+				.filter(repoAndPattern -> !org.springframework.util.CollectionUtils.isEmpty(repoAndPattern.getSubRepos()))
+				.collect(Collectors.toMap(RepoAndPattern::getSubRepos, RepoAndPattern::getPatterns));
+		subReposListToPatterns.forEach((subRepos, patterns) -> subRepos.forEach(subRepo -> subRepoToPattern.put(subRepo, patterns)));
+		return subRepoToPattern;
+	}
+
 
 	private JSONArray sendPost(long start, String repoName, String path, String instanceUrl) throws ParseException {
 		String returnJSON = sendPostQueryByRepo(start, repoName, path, instanceUrl);
