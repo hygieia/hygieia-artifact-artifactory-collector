@@ -92,6 +92,9 @@ public class ArtifactoryController {
           artifactItem.setId(c.getId());
           artifactItem.setDescription(c.getDescription());
           ArtifactUtil.normalize(artifactItem);
+          artifactItem.setEnabled(true);
+          artifactItem.setPushed(c.isPushed());
+          artifactItem.setCollectorId(c.getCollectorId());
           artifactItem.setLastUpdated(c.getLastUpdated());
           if(!request.isMetrics()) {
             List<BinaryArtifact> updated = artifactoryClient.getArtifacts(artifactItem, artifactoryClient.getPattern(artifactItem.getRepoName()));
@@ -120,6 +123,6 @@ public class ArtifactoryController {
     collectorItemDataNotFound.forEach(collectorItem -> LOGGER.info(collectorItem));
     return ResponseEntity
       .status(HttpStatus.OK)
-      .body("Total dashboards="+dashboardCount+", total collectorITems="+collectorItemsCount+", actualCollectorItemsDataCount="+actualCollectorItemsDataPresent);
+      .body("Total dashboards="+dashboardCount+", total collectorItems="+collectorItemsCount+", actualCollectorItemsDataCount="+actualCollectorItemsDataPresent);
   }
 }
