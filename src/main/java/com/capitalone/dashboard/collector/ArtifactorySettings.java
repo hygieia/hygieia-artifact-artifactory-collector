@@ -1,10 +1,8 @@
 package com.capitalone.dashboard.collector;
 
-import com.capitalone.dashboard.client.RestClientSettings;
 import com.capitalone.dashboard.model.ArtifactoryCollectionMode;
 import com.capitalone.dashboard.model.ServerSetting;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,8 +12,7 @@ import java.util.List;
  */
 @Component
 @ConfigurationProperties(prefix = "artifactory")
-@Primary
-public class ArtifactorySettings implements RestClientSettings {
+public class ArtifactorySettings {
     private String cron;
     List<ServerSetting> servers;
     ArtifactoryCollectionMode mode;

@@ -55,7 +55,7 @@ public class DefaultArtifactoryClientTest {
     @Before
     public void init() {
 		settings = new ArtifactorySettings();
-    	when(restOperationsSupplier.get(settings)).thenReturn(rest);
+    	when(restOperationsSupplier.get()).thenReturn(rest);
         ServerSetting serverSetting = new ServerSetting();
 		serverSetting.setUrl("http://localhost:8081/artifactory");
 		RepoAndPattern r = new RepoAndPattern();
@@ -65,7 +65,7 @@ public class DefaultArtifactoryClientTest {
         settings.setServers(Collections.singletonList(serverSetting));
         settings.setTimeInterval(3);
         settings.setTimeUnit("DAYS");
-        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier, settings),binaryArtifactRepository);
+        defaultArtifactoryClient = new DefaultArtifactoryClient(settings, new RestClient(restOperationsSupplier),binaryArtifactRepository);
     }
     
     @Test

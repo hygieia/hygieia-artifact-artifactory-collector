@@ -129,12 +129,6 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     }
 
-    @Override
-    public int getCount() {
-        return this.count.get();
-    }
-
-
     protected void collectRepoBased(ArtifactoryCollector collector) {
         Set<ObjectId> udId = new HashSet<>();
         udId.add(collector.getId());
