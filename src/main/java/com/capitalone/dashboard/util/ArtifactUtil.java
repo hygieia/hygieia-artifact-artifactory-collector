@@ -3,6 +3,7 @@ package com.capitalone.dashboard.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.BinaryArtifact;
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,6 +14,7 @@ public class ArtifactUtil {
 	private static final String VERSION_REGEX_GROUP = "version";
 	private static final String CLASSIFIER_REGEX_GROUP = "classifier";
 	private static final String EXT_REGEX_GROUP = "ext";
+	public static final String SLASH = "/";
 
 	public static final BinaryArtifact parse(Pattern pattern, String path) {
 		Matcher matcher = pattern.matcher(path);
@@ -129,6 +131,38 @@ public class ArtifactUtil {
 		} else {
 			return false;
 		}
+	}
+
+	public static ArtifactItem normalize(ArtifactItem artifactItem){
+		artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
+		artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
+		artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
+		artifactItem.setPath(normalizePath(artifactItem.getPath(),artifactItem.getRepoName()));
+		return  artifactItem;
+	}
+
+	public static String removeLeadAndTrailingSlash(String path){
+		path = removeSlash(path, "/+$");
+		path = removeSlash(path, "^/+");
+		return path;
+	}
+
+	public static String removeSlash(String path, String s) {
+		return path.replaceAll(s, "");
+	}
+
+	public static String truncate(String name){
+		name = removeLeadAndTrailingSlash(name);
+		if(name.indexOf(SLASH) > 0){
+			return name.substring(0, name.indexOf(SLASH));
+		}
+		return name;
+	}
+
+	public static String normalizePath(String path, String repoName){
+		path = removeLeadAndTrailingSlash(path);
+		if(path.indexOf(SLASH) > 0) return path;
+		return repoName+ SLASH +path;
 	}
 
 }

@@ -39,4 +39,7 @@ public interface ArtifactoryClient {
 
     Map<ArtifactItem,List<BinaryArtifact>> getLatestBinaryArtifacts(Collector collector, List<String> patterns, String instanceUrl, String repo);
 
+    List<String> getPattern(String repoName);
+
+
 }
