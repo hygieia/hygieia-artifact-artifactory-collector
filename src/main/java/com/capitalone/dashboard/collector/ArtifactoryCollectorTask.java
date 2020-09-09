@@ -65,6 +65,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     private final GenericCollectorItemRepository genericCollectorItemRepository;
     private final RelatedCollectorItemRepository relatedCollectorItemRepository;
     private final BuildRepository buildRepository;
+    private AtomicInteger count = new AtomicInteger(0);
 
     @SuppressWarnings("PMD.ExcessiveParameterList")
     @Autowired
@@ -109,6 +110,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     @Override
     public void collect(ArtifactoryCollector collector) {
+        this.count.set(0);
         LOGGER.info("COLLECTION MODE= " + artifactorySettings.getMode());
         switch (artifactorySettings.getMode()) {
             case REPO_BASED:
@@ -126,7 +128,6 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         }
 
     }
-
 
     protected void collectRepoBased(ArtifactoryCollector collector) {
         Set<ObjectId> udId = new HashSet<>();
@@ -412,13 +413,12 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     private void addNewArtifacts(List<ArtifactoryRepo> enabledRepos) {
         long start = System.currentTimeMillis();
 
-        int count = 0;
         for (ArtifactoryRepo repo : enabledRepos) {
             for (BinaryArtifact artifact : nullSafe(artifactoryClient.getArtifacts(repo.getInstanceUrl(), repo.getRepoName(), repo.getLastUpdated()))) {
                 if (artifact != null && isNewArtifact(repo, artifact)) {
                     artifact.setCollectorItemId(repo.getId());
                     binaryArtifactRepository.save(artifact);
-                    count++;
+                    count.getAndIncrement();
                 }
             }
         }
@@ -429,7 +429,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         }
         // We set the last update time so need to save it
         artifactoryRepoRepository.save(enabledRepos);
-        log("New artifacts", start, count);
+        log("New artifacts", start, count.get());
     }
 
 
@@ -440,7 +440,6 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
     private void addNewArtifactsItems(List<BaseArtifact> baseArtifacts, Set<ArtifactItem> existingArtifactItems, ArtifactoryCollector collector) {
         long start = System.currentTimeMillis();
         List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
-        int count = 0;
         for (BaseArtifact baseArtifact : baseArtifacts) {
             ArtifactItem newArtifactItem = baseArtifact.getArtifactItem();
             if (newArtifactItem != null && !existingArtifactItems.contains(newArtifactItem)) {
@@ -449,7 +448,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                 newArtifactItem.setCollectorId(collector.getId());
                 newArtifactItem = artifactItemRepository.save(newArtifactItem);
                 existingArtifactItems.add(newArtifactItem);
-                count++;
+                count.getAndIncrement();
             }
             List<BinaryArtifact> binaryArtifactsAssociated = baseArtifact.getBinaryArtifacts();
             if (!CollectionUtils.isEmpty(binaryArtifactsAssociated) ) {
@@ -467,7 +466,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             LOGGER.info("Saving " + binaryArtifacts.size() + " binary artifacts");
             binaryArtifacts.forEach(binaryArtifact -> binaryArtifactRepository.save(binaryArtifact));
         }
-        log("New artifacts items", start, count);
+        log("New artifacts items", start, count.get());
     }
 
     private ObjectId getExistingArtifactIdAndSave(ArtifactItem found) {

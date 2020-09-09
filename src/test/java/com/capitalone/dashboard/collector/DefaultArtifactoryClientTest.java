@@ -1,6 +1,7 @@
 package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.client.RestClient;
+import com.capitalone.dashboard.client.RestOperationsSupplier;
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactoryRepo;
 import com.capitalone.dashboard.model.BaseArtifact;
@@ -10,7 +11,6 @@ import com.capitalone.dashboard.model.RepoAndPattern;
 import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtilTest;
-import com.capitalone.dashboard.util.Supplier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.bson.types.ObjectId;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultArtifactoryClientTest {
-	@Mock private Supplier<RestOperations> restOperationsSupplier;
+	@Mock private RestOperationsSupplier restOperationsSupplier;
     @Mock private RestOperations rest;
     @Mock private ArtifactorySettings settings;
     @Mock private BinaryArtifactRepository binaryArtifactRepository;
@@ -54,8 +54,8 @@ public class DefaultArtifactoryClientTest {
     
     @Before
     public void init() {
+		settings = new ArtifactorySettings();
     	when(restOperationsSupplier.get()).thenReturn(rest);
-        settings = new ArtifactorySettings();
         ServerSetting serverSetting = new ServerSetting();
 		serverSetting.setUrl("http://localhost:8081/artifactory");
 		RepoAndPattern r = new RepoAndPattern();
