@@ -203,6 +203,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                     LOGGER.info("processing artifact=" + artifactItem.getArtifactName()+", repo="+artifactItem.getRepoName());
                     List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
                     for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
+                        newBinaryArtifact.setCollectorItemId(artifactItem.getId());
                         BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
                                 newBinaryArtifact.getArtifactVersion());
                         if (Objects.nonNull(existingBinaryArtifact)) {
