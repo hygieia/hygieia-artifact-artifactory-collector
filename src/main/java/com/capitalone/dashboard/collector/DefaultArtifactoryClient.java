@@ -51,6 +51,7 @@ import java.util.stream.Stream;
 @Component
 public class DefaultArtifactoryClient implements ArtifactoryClient {
 	public static final int UPPER_INDEX = -1;
+	public static final String SLASH = "/";
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultArtifactoryClient.class);
 
 	private static final String REPOS_URL_SUFFIX = "api/repositories";
@@ -265,6 +266,90 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		}
 		return processing;
 	}
+	public List<BinaryArtifact> getArtifactsForVersion(ArtifactItem artifactItem, String version, long startTime, List<String> patterns){
+		List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
+		normalize(artifactItem);
+		int count =0;
+
+		try {
+			JSONArray jsonArtifacts = sendPost(startTime,
+					artifactItem.getRepoName(),
+					artifactItem.getPath(),
+					artifactItem.getInstanceUrl());
+			if (Objects.isNull(jsonArtifacts)) {
+				LOGGER.error("No json artifacts found for repo=" + artifactItem.getRepoName()
+						+ " path=" + artifactItem.getPath()
+						+ " collectorItemId=" + artifactItem.getId());
+				return binaryArtifacts;
+			}
+
+			LOGGER.info("Total JSON Artifacts -- " + jsonArtifacts.size());
+			for (Object artifact : jsonArtifacts) {
+				JSONObject jsonArtifact = (JSONObject) artifact;
+				BinaryArtifact newbinaryArtifact = createBinaryArtifactFromJsonArtifact(jsonArtifact, artifactItem);
+				final String artifactCanonicalName = getString(jsonArtifact, "name");
+				String artifactPath = getString(jsonArtifact, "path");
+				String fullPath = artifactPath + "/" + artifactCanonicalName;
+
+				BinaryArtifact parsedResult = new BinaryArtifact();
+				boolean isValidParse = false;
+				// check if have values for all regex groups in pattern
+				// try each pattern, if all values are found, then break loop; otherwise continue onto next pattern
+				for (String pattern: patterns) {
+					Pattern p = Pattern.compile(pattern);
+					isValidParse = ArtifactUtil.validParse(parsedResult, p, fullPath);
+					if (isValidParse) break;
+				}
+				if (isValidParse) {
+					// version null check
+					if (parsedResult.getArtifactVersion() == null) {
+						LOGGER.error("Could not find version for repo=" + artifactItem.getRepoName() + " fullPath=" + fullPath);
+						break;
+					}
+					if(parsedResult.getArtifactVersion().equalsIgnoreCase(version)){
+						newbinaryArtifact = updateBinaryArtifactWithPatternMatchedAttributes(newbinaryArtifact, parsedResult);
+						// Check if matching Binary Artifact already exists
+						BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
+								newbinaryArtifact.getArtifactVersion());
+						if (Objects.nonNull(existingBinaryArtifact)) {
+							// update existing binary artifact for that version and update timestamp
+							updateExistingBinaryArtifact(newbinaryArtifact, existingBinaryArtifact);
+							binaryArtifacts.add(newbinaryArtifact);
+							binaryArtifactRepository.save(newbinaryArtifact);
+						}
+						else {
+							// get latest binary artifact for this artifact item with build info
+							attachLatestBuildInfo(artifactItem, newbinaryArtifact);
+							// save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
+							binaryArtifactRepository.save(newbinaryArtifact);
+						}
+						count++;
+						LOGGER.info("json artifact count -- " + count
+								+ " repo=" + artifactItem.getRepoName()
+								+ ", artifactPath=" + artifactPath
+								+ ", artifactCanonicalName=" + artifactCanonicalName
+								+ ", collectorItemId=" + artifactItem.getId()+", artifactVersion="+version);
+					}
+				} else {
+					// invalid parse/not enough data found
+					count++;
+					LOGGER.error("Not enough data found for json artifact count -- " + count
+							+ " repo=" + artifactItem.getRepoName()
+							+ " artifactPath=" + artifactPath
+							+ " artifactCanonicalName=" + artifactCanonicalName
+							+ " collectorItemId=" + artifactItem.getId()+", artifactVersion="+version);
+				}
+			}
+
+		} catch (ParseException e) {
+			LOGGER.error("Parsing artifact items on instance: " + artifactItem.getInstanceUrl() + " and repo: " + artifactItem.getRepoName(), e);
+		} catch (Exception e) {
+			LOGGER.error("Received Exception= " + e.toString() + " artifactPath=" + artifactItem.getPath(), e);
+		}
+		return binaryArtifacts;
+	}
+
+
 	public List<BinaryArtifact> getArtifacts(ArtifactItem artifactItem,List<String> patterns){
         long start = getLastUpdated(artifactItem.getLastUpdated());
 		List<BinaryArtifact> binaryArtifacts = new ArrayList<>();
@@ -368,6 +453,15 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		List<String> pattern =  getRepoAndSubRepoPatterns().entrySet().stream().filter(entry -> repoName.contains(entry.getKey())).map(entry -> entry.getValue()).findFirst().orElse(null);
 		if (org.springframework.util.CollectionUtils.isEmpty(pattern)) return null;
 		return pattern;
+	}
+
+	@Override
+	public ArtifactItem normalize(ArtifactItem artifactItem){
+		artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
+		artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
+		artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
+		artifactItem.setPath(normalizePath(artifactItem.getPath(),artifactItem.getRepoName()));
+		return  artifactItem;
 	}
 
 	private Map<String, List<String>> getRepoAndSubRepoPatterns() {
@@ -900,6 +994,32 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 		artifactItem.setDescription(artName);
 		artifactItem.setLastUpdated(System.currentTimeMillis());
 		return artifactItem;
+	}
+
+
+
+	private String removeLeadAndTrailingSlash(String path){
+		path = removeSlash(path, "/+$");
+		path = removeSlash(path, "^/+");
+		return path;
+	}
+
+	private String removeSlash(String path, String s) {
+		return path.replaceAll(s, "");
+	}
+
+	private String truncate(String name){
+		name = removeLeadAndTrailingSlash(name);
+		if(name.indexOf(SLASH) > 0){
+			return name.substring(0, name.indexOf(SLASH));
+		}
+		return name;
+	}
+
+	private String normalizePath(String path, String repoName){
+		path = removeLeadAndTrailingSlash(path);
+		if(path.indexOf(SLASH) > 0) return path;
+		return repoName+ SLASH +path;
 	}
 
 }

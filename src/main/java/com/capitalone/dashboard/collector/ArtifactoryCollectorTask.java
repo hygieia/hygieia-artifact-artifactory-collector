@@ -50,11 +50,11 @@ import java.util.stream.Stream;
 
 @Component
 public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<ArtifactoryCollector> {
-    public static final String SLASH = "/";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtifactoryCollectorTask.class);
     private static final int ARTIFACT_GROUP = 1;
     private static final int ARTIFACT_NAME = 2;
-
+    public static final String SLASH = "/";
     private final ArtifactoryCollectorRepository artifactoryCollectorRepository;
     private final ArtifactoryRepoRepository artifactoryRepoRepository;
     private final ArtifactItemRepository artifactItemRepository;
@@ -194,7 +194,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             int counter = 0;
             Map<ArtifactItem,List<BinaryArtifact>> processing = artifactoryClient.getLatestBinaryArtifacts(collector,getPattern(repo),instanceUrl,repo);
             for (ArtifactItem artifactItem: enabledArtifactItems) {
-                normalize(artifactItem);
+                artifactoryClient.normalize(artifactItem);
                 String rootRepoName = replaceSubRepos(artifactItem.getRepoName(),subRepoMap);
                 if(Objects.nonNull(rootRepoName)){
                     artifactItem.setRepoName(rootRepoName);
@@ -240,37 +240,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
          return null;
     }
 
-    private ArtifactItem normalize(ArtifactItem artifactItem){
-        artifactItem.setInstanceUrl(removeLeadAndTrailingSlash(artifactItem.getInstanceUrl()));
-        artifactItem.setArtifactName(removeLeadAndTrailingSlash(artifactItem.getArtifactName()));
-        artifactItem.setRepoName(truncate(artifactItem.getRepoName()));
-        artifactItem.setPath(normalizePath(artifactItem.getPath(),artifactItem.getRepoName()));
-        return  artifactItem;
-    }
 
-    private String removeLeadAndTrailingSlash(String path){
-        path = removeSlash(path, "/+$");
-        path = removeSlash(path, "^/+");
-        return path;
-    }
-
-    private String removeSlash(String path, String s) {
-        return path.replaceAll(s, "");
-    }
-
-    private String truncate(String name){
-        name = removeLeadAndTrailingSlash(name);
-        if(name.indexOf(SLASH) > 0){
-            return name.substring(0, name.indexOf(SLASH));
-        }
-        return name;
-    }
-
-    private String normalizePath(String path, String repoName){
-        path = removeLeadAndTrailingSlash(path);
-        if(path.indexOf(SLASH) > 0) return path;
-        return repoName+ SLASH +path;
-    }
 
     private void updateExistingBinaryArtifact(BinaryArtifact newBinaryArtifact, BinaryArtifact existingBinaryArtifact) {
         // update all fields except build infos

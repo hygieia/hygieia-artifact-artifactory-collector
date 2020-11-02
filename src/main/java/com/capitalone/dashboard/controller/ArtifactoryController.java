@@ -4,13 +4,16 @@ import com.capitalone.dashboard.collector.DefaultArtifactoryClient;
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.ArtifactItem;
 import com.capitalone.dashboard.model.ArtifactSyncRequest;
+import com.capitalone.dashboard.model.ArtifactVersionRequest;
 import com.capitalone.dashboard.model.BinaryArtifact;
+import com.capitalone.dashboard.model.Collector;
 import com.capitalone.dashboard.model.CollectorItem;
 import com.capitalone.dashboard.model.CollectorType;
 import com.capitalone.dashboard.model.Component;
 import com.capitalone.dashboard.model.Dashboard;
 import com.capitalone.dashboard.repository.ArtifactItemRepository;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
+import com.capitalone.dashboard.repository.CollectorRepository;
 import com.capitalone.dashboard.repository.ComponentRepository;
 import com.capitalone.dashboard.repository.DashboardRepository;
 import com.capitalone.dashboard.util.ArtifactUtil;
@@ -43,6 +46,7 @@ public class ArtifactoryController {
   private final ComponentRepository componentRepository;
   private final DashboardRepository dashboardRepository;
   private final BinaryArtifactRepository binaryArtifactRepository;
+  private final CollectorRepository collectorRepository;
 
 
   @Autowired
@@ -50,12 +54,14 @@ public class ArtifactoryController {
                                ArtifactItemRepository artifactItemRepository,
                                ComponentRepository componentRepository,
                                DashboardRepository dashboardRepository,
-                               BinaryArtifactRepository binaryArtifactRepository) {
+                               BinaryArtifactRepository binaryArtifactRepository,
+                               CollectorRepository collectorRepository) {
     this.artifactoryClient = artifactoryClient;
     this.artifactItemRepository = artifactItemRepository;
     this.componentRepository = componentRepository;
     this.dashboardRepository = dashboardRepository;
     this.binaryArtifactRepository = binaryArtifactRepository;
+    this.collectorRepository = collectorRepository;
   }
 
   @RequestMapping(value = "/refresh", method = POST, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -124,5 +130,20 @@ public class ArtifactoryController {
     return ResponseEntity
       .status(HttpStatus.OK)
       .body("Total dashboards="+dashboardCount+", total collectorItems="+collectorItemsCount+", actualCollectorItemsDataCount="+actualCollectorItemsDataPresent);
+  }
+
+  @RequestMapping(value = "/artifactByVersion", method = POST, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<BinaryArtifact>> findArtifactByVersion(@RequestBody ArtifactVersionRequest request) throws HygieiaException{
+    Collector collector = collectorRepository.findByName("Artifactory");
+    List<BinaryArtifact> bas = new ArrayList<>();
+    if(Objects.nonNull(collector)){
+     List<ArtifactItem> matchedArtifactItems=  artifactItemRepository.findArtifactItemByOptions(collector.getId(),request.getArtifactName(),request.getRepoName(),request.getPath(),request.getInstanceUrl());
+      for (ArtifactItem artifactItem: matchedArtifactItems) {
+        bas.addAll(artifactoryClient.getArtifactsForVersion(artifactItem,request.getArtifactVersion(), request.getStartTime(),  artifactoryClient.getPattern(artifactItem.getRepoName())));
+      }
+    }
+    return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(bas);
   }
 }

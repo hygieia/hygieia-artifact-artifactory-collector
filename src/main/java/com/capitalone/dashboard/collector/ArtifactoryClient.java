@@ -18,7 +18,6 @@ public interface ArtifactoryClient {
      * Obtain list of repos in the given artifactory
      *
      * @param instanceUrl         server url
-     * @param artifactoryEndpoint endpoint of the artifactory in the instance url
      * @return
      */
     List<ArtifactoryRepo> getRepos(String instanceUrl);
@@ -41,5 +40,6 @@ public interface ArtifactoryClient {
 
     List<String> getPattern(String repoName);
 
+    ArtifactItem normalize(ArtifactItem artifactItem);
 
 }
