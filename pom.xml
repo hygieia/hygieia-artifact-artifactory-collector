@@ -10,7 +10,7 @@
   <packaging>jar</packaging>
   <artifactId>artifactory-artifact-collector</artifactId>
   <url>https://github.com/Hygieia/${repository.name}</url>
-  <version>3.2.1-SNAPSHOT</version>
+  <version>3.2.2-SNAPSHOT</version>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
