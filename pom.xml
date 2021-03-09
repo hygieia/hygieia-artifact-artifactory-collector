@@ -10,7 +10,7 @@
   <packaging>jar</packaging>
   <artifactId>artifactory-artifact-collector</artifactId>
   <url>https://github.com/Hygieia/${repository.name}</url>
-  <version>3.2.2-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
@@ -48,7 +48,7 @@
 
   <properties>
     <!-- Dependencies -->
-    <com.capitalone.dashboard.core.version>3.10.0</com.capitalone.dashboard.core.version>
+    <com.capitalone.dashboard.core.version>3.14.6</com.capitalone.dashboard.core.version>
     <spring-security.version>4.2.18.RELEASE</spring-security.version>
     <tomcat.version>8.5.57</tomcat.version>
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
@@ -68,7 +68,6 @@
     <!-- Plugins -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <final.name>jira-feature-collector</final.name>
     <repository.name>hygieia-artifact-artifactory-collector</repository.name>
     <apache.rat.plugin.version>0.13</apache.rat.plugin.version>
     <coveralls.maven.plugin.version>4.3.0</coveralls.maven.plugin.version>

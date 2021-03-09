@@ -43,6 +43,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultArtifactoryClientTest {
+
 	@Mock private RestOperationsSupplier restOperationsSupplier;
     @Mock private RestOperations rest;
     @Mock private ArtifactorySettings settings;
