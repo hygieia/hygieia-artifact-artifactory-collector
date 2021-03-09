@@ -10,7 +10,6 @@ import com.capitalone.dashboard.model.RepoAndPattern;
 import com.capitalone.dashboard.model.ServerSetting;
 import com.capitalone.dashboard.repository.BinaryArtifactRepository;
 import com.capitalone.dashboard.util.ArtifactUtil;
-import com.google.gson.JsonArray;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.map.HashedMap;
