@@ -230,6 +230,8 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         LOGGER.info(String.format("ArtifactoryCollectorTask:collect stop, totalProcessSeconds=%d,  totalEnabledArtifacts=%d, totalUpdatedArtifacts=%d",
                 elapsedTime, enabledArtifactItems.size(), count.get()));
         collector.setLastExecuted(start);
+        collector.setLastExecutedSeconds(elapsedTime);
+        collector.setLastExecutionRecordCount(enabledArtifactItems.size());
         artifactoryCollectorRepository.save(collector);
     }
 
