@@ -1004,7 +1004,10 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 	}
 
 	private String removeSlash(String path, String s) {
-		return path.replaceAll(s, "");
+		if(StringUtils.isNotEmpty(path)){
+			return path.replaceAll(s, "");
+		}
+		return "";
 	}
 
 	private String truncate(String name){
