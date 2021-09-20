@@ -194,33 +194,37 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             int counter = 0;
             Map<ArtifactItem,List<BinaryArtifact>> processing = artifactoryClient.getLatestBinaryArtifacts(collector,getPattern(repo),instanceUrl,repo);
             for (ArtifactItem artifactItem: enabledArtifactItems) {
-                artifactoryClient.normalize(artifactItem);
-                String rootRepoName = replaceSubRepos(artifactItem.getRepoName(),subRepoMap);
-                if(Objects.nonNull(rootRepoName)){
-                    artifactItem.setRepoName(rootRepoName);
-                }
-                if(processing.keySet().contains(artifactItem)){
-                    LOGGER.info("processing artifact=" + artifactItem.getArtifactName()+", repo="+artifactItem.getRepoName());
-                    List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
-                    for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
-                        newBinaryArtifact.setCollectorItemId(artifactItem.getId());
-                        BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
-                                newBinaryArtifact.getArtifactVersion());
-                        if (Objects.nonNull(existingBinaryArtifact)) {
-                            // update existing binary artifact for that version and update timestamp
-                            updateExistingBinaryArtifact(newBinaryArtifact, existingBinaryArtifact);
-                            binaryArtifactRepository.save(newBinaryArtifact);
-                        } else {
-                            // get latest binary artifact for this artifact item with build info
-                            attachLatestBuildInfo(artifactItem, newBinaryArtifact);
-                            // save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
-                            binaryArtifactRepository.save(newBinaryArtifact);
-                        }
+                try{
+                    artifactoryClient.normalize(artifactItem);
+                    String rootRepoName = replaceSubRepos(artifactItem.getRepoName(),subRepoMap);
+                    if(Objects.nonNull(rootRepoName)){
+                        artifactItem.setRepoName(rootRepoName);
                     }
-                    artifactItem.setLastUpdated(System.currentTimeMillis());
-                    artifactItemRepository.save(artifactItem);
-                    count.getAndIncrement();
-                    counter++;
+                    if(processing.keySet().contains(artifactItem)){
+                        LOGGER.info("processing artifact=" + artifactItem.getArtifactName()+", repo="+artifactItem.getRepoName());
+                        List<BinaryArtifact> binaryArtifacts = processing.get(artifactItem);
+                        for (BinaryArtifact newBinaryArtifact: binaryArtifacts) {
+                            newBinaryArtifact.setCollectorItemId(artifactItem.getId());
+                            BinaryArtifact existingBinaryArtifact = binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(artifactItem.getId(),
+                                    newBinaryArtifact.getArtifactVersion());
+                            if (Objects.nonNull(existingBinaryArtifact)) {
+                                // update existing binary artifact for that version and update timestamp
+                                updateExistingBinaryArtifact(newBinaryArtifact, existingBinaryArtifact);
+                                binaryArtifactRepository.save(newBinaryArtifact);
+                            } else {
+                                // get latest binary artifact for this artifact item with build info
+                                attachLatestBuildInfo(artifactItem, newBinaryArtifact);
+                                // save immediately to avoid creating multiple new BAs for same collectorItemId and artifactVersion
+                                binaryArtifactRepository.save(newBinaryArtifact);
+                            }
+                        }
+                        artifactItem.setLastUpdated(System.currentTimeMillis());
+                        artifactItemRepository.save(artifactItem);
+                        count.getAndIncrement();
+                        counter++;
+                    }
+                }catch (Exception e) {
+                        LOGGER.error(String.format("collect() : artifactName=%s & artifactRepo=%s, unexpected error occurred while collecting data from instance_url=%s with exception=%s", artifactItem.getArtifactName(), artifactItem.getRepoName(), instanceUrl, e.getClass().getCanonicalName()), e);
                 }
             }
             LOGGER.info("updated artifacts for repo=" + repo+", updatedCount="+counter);
