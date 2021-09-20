@@ -224,7 +224,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
                         counter++;
                     }
                 }catch (Exception e) {
-                        LOGGER.error(String.format("collect() : unexpected error occurred while collecting data from instance_url=%s with exception=%s", instanceUrl, e.getClass().getCanonicalName()), e);
+                        LOGGER.error(String.format("collect() : artifactName=%s & artifactRepo=%s, unexpected error occurred while collecting data from instance_url=%s with exception=%s", artifactItem.getArtifactName(), artifactItem.getRepoName(), instanceUrl, e.getClass().getCanonicalName()), e);
                 }
             }
             LOGGER.info("updated artifacts for repo=" + repo+", updatedCount="+counter);
