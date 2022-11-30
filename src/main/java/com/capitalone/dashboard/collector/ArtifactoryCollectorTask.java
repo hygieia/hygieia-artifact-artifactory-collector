@@ -34,14 +34,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -258,7 +251,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
 
     private void attachLatestBuildInfo(ArtifactItem artifactItem, BinaryArtifact binaryArtifact) {
         // get latest binary artifact associated with the artifact item by desc timestamp
-        BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), new Sort(Sort.Direction.DESC, "timestamp"));
+        BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), Sort.by(Sort.Direction.DESC, "timestamp"));
         if (Objects.isNull(latestWithBuildInfo)) return;
         binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
     }
@@ -280,12 +273,12 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             Iterable<BinaryArtifact> binaryArtifacts = binaryArtifactRepository.findByCollectorItemId(artCollectorItemId);
             List<Build> associatedBuilds = new ArrayList<>();
             buildIdSet.forEach(buildId -> {
-                associatedBuilds.add(buildRepository.findOne(buildId));
+                associatedBuilds.add((Build) buildRepository.findAllById(Collections.singleton(buildId)));
             });
             binaryArtifacts.forEach(binaryArtifact -> {
                 if (associatedBuilds != null) {
                     binaryArtifact.addBuild(associatedBuilds.get(0));
-                    binaryArtifactRepository.save(binaryArtifacts);
+                    binaryArtifactRepository.saveAll(binaryArtifacts);
                 }
             });
 
@@ -328,7 +321,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             }
         }
         if (!CollectionUtils.isEmpty(stateChangeRepoList)) {
-            artifactoryRepoRepository.save(stateChangeRepoList);
+            artifactoryRepoRepository.saveAll(stateChangeRepoList);
         }
     }
 
@@ -377,7 +370,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
         }
         //save all in one shot
         if (!CollectionUtils.isEmpty(newRepos)) {
-            artifactoryRepoRepository.save(newRepos);
+            artifactoryRepoRepository.saveAll(newRepos);
         }
         log("New repos", start, count);
     }
@@ -405,7 +398,7 @@ public class ArtifactoryCollectorTask extends CollectorTaskWithGenericItem<Artif
             repo.setLastUpdated(start);
         }
         // We set the last update time so need to save it
-        artifactoryRepoRepository.save(enabledRepos);
+        artifactoryRepoRepository.saveAll(enabledRepos);
         log("New artifacts", start, count.get());
     }
 

@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -85,7 +86,7 @@ public class ArtifactoryController {
       }
       dashboardCount = dashboardCount + ds.size();
       for (Dashboard d : ds) {
-        Component component = componentRepository.findOne(d.getApplication().getComponents().get(0).getId());
+        Component component = (Component) componentRepository.findAllById(Collections.singleton(d.getApplication().getComponents().get(0).getId()));
         List<CollectorItem> collectorItems = component.getCollectorItems().get(CollectorType.Artifact);
         if(CollectionUtils.isEmpty(collectorItems)) {
           dashboardNotConfiguredWithArtifactory.add(dashboard);

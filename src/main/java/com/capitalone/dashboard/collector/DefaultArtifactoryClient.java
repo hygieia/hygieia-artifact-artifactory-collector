@@ -594,7 +594,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 
 	private void attachLatestBuildInfo(ArtifactItem artifactItem, BinaryArtifact binaryArtifact) {
 		// get latest binary artifact associated with the artifact item by desc timestamp
-		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), new Sort(Sort.Direction.DESC, "timestamp"));
+		BinaryArtifact latestWithBuildInfo = binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(artifactItem.getId(), Sort.by(Sort.Direction.DESC, "timestamp"));
 		if (Objects.isNull(latestWithBuildInfo)) return;
 		binaryArtifact.setBuildInfos(latestWithBuildInfo.getBuildInfos());
 	}
@@ -774,7 +774,7 @@ public class DefaultArtifactoryClient implements ArtifactoryClient {
 					for (BinaryArtifact ba: bas) {
 						setCollectorItemId(result, ba);
 						setBuilds(result, ba);
-						binaryArtifactRepository.delete(ba.getId());
+						binaryArtifactRepository.delete(ba);
 					}
 				}
 				result.setType(getString(jsonArtifact, "type"));
