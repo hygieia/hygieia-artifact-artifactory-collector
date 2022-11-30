@@ -10,17 +10,17 @@
   <packaging>jar</packaging>
   <artifactId>artifactory-artifact-collector</artifactId>
   <url>https://github.com/Hygieia/${repository.name}</url>
-  <version>3.2.6-SNAPSHOT</version>
+  <version>3.2.7-SNAPSHOT</version>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.5.22.RELEASE</version>
+    <version>2.7.0</version>
   </parent>
 
   <organization>
     <name>Hygieia</name>
-    <url>https://www.github.com/Hygieia/</url>
+    <url>https://www.github.com/hygieia/</url>
   </organization>
 
   <scm>
@@ -48,43 +48,43 @@
 
   <properties>
     <!-- Dependencies -->
-    <com.capitalone.dashboard.core.version>3.15.26</com.capitalone.dashboard.core.version>
-    <spring-security.version>4.2.18.RELEASE</spring-security.version>
-    <tomcat.version>8.5.57</tomcat.version>
+    <com.capitalone.dashboard.core.version>4.0.1</com.capitalone.dashboard.core.version>
+    <spring-security.version>5.6.6</spring-security.version>
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-codec.version>1.14</commons-codec.version>
     <commons-collections4.version>4.1</commons-collections4.version>
-    <commons-io.version>2.4</commons-io.version>
+    <commons-io.version>2.11.0</commons-io.version>
     <commons-lang.version>3.10</commons-lang.version>
     <fongo.version>2.2.0-RC2</fongo.version>
     <guava.version>29.0-jre</guava.version>
-    <hibernate-validator.version>5.4.2.Final</hibernate-validator.version>
+    <hibernate-validator.version>7.0.0.Final</hibernate-validator.version>
     <jackson.version>2.10.3</jackson.version>
     <jasypt.version>1.18</jasypt.version>
     <logback.version>1.2.3</logback.version>
-    <mongodb.version>3.6.4</mongodb.version>
+    <mongodb.version>4.0.6</mongodb.version>
     <assertj.version>3.9.0</assertj.version>
 
     <!-- Plugins -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>1.8</java.version>
-    <repository.name>hygieia-artifact-artifactory-collector</repository.name>
+    <sonar.skip>true</sonar.skip>
+    <java.version>11</java.version>
+    <repository.name>artifactory-collector-ace</repository.name>
     <apache.rat.plugin.version>0.13</apache.rat.plugin.version>
     <coveralls.maven.plugin.version>4.3.0</coveralls.maven.plugin.version>
     <developmentTeam>The Hygieia Team</developmentTeam>
     <jacoco.maven.plugin.version>0.8.3</jacoco.maven.plugin.version>
-    <jacoco.coverage.percentage.minimum>0.010</jacoco.coverage.percentage.minimum><!-- will fix in future-->
-    <jacoco.classes.missed.minimum>15</jacoco.classes.missed.minimum>
+    <jacoco.coverage.percentage.minimum>0.000</jacoco.coverage.percentage.minimum><!-- will fix in future-->
+    <jacoco.classes.missed.minimum>3000</jacoco.classes.missed.minimum>
     <japicmp.breakBuildOnBinaryIncompatibleModifications>true</japicmp.breakBuildOnBinaryIncompatibleModifications>
     <japicmp.breakBuildOnSourceIncompatibleModifications>true</japicmp.breakBuildOnSourceIncompatibleModifications>
     <japicmp.skip>false</japicmp.skip>
-    <java.compilation.source>1.8</java.compilation.source>
-    <java.compilation.target>1.8</java.compilation.target>
+    <java.compilation.source>11</java.compilation.source>
+    <java.compilation.target>11</java.compilation.target>
     <maven.changes.plugin.version>2.12.1</maven.changes.plugin.version>
     <maven.checkstyle.plugin.version>3.0.0</maven.checkstyle.plugin.version>
     <maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <maven.javadoc.plugin.version>3.1.0</maven.javadoc.plugin.version>
     <maven.pmd.plugin.version>3.11.0</maven.pmd.plugin.version>
     <maven.project-info.version>3.0.0</maven.project-info.version>
@@ -93,6 +93,7 @@
     <site.publish.url>https://github.com/Hygieia/${project.artifactId}</site.publish.url>
     <site.publish.checkout.directory>site-content</site.publish.checkout.directory>
     <spotbugs.plugin.version>3.1.11</spotbugs.plugin.version>
+    <mockito.core.version>1.10.19</mockito.core.version>
   </properties>
 
   <issueManagement>
@@ -102,29 +103,14 @@
 
   <developers>
     <developer>
-      <name>Amit Mawkin</name>
-    </developer>
-    <developer>
-      <name>Tapabrata Topo Pal</name>
-      <email>tapabrata.pal@capitalone.com</email>
-      <organization>CapitalOne</organization>
-      <organizationUrl>http://www.capitalone.com</organizationUrl>
-    </developer>
-    <developer>
-      <name>Raghavendra Vema</name>
-      <email>ragha.vema@capitalone.com</email>
-      <organization>CapitalOne</organization>
-      <organizationUrl>http://www.capitalone.com</organizationUrl>
-    </developer>
-    <developer>
       <name>Nireesh Thiruveedula</name>
       <email>nireesh.thiruveedula@capitalone.com</email>
       <organization>CapitalOne</organization>
       <organizationUrl>http://www.capitalone.com</organizationUrl>
     </developer>
     <developer>
-      <name>Stephen Hughes</name>
-      <email>stephen.hughes@capitalone.com</email>
+      <name>Aravindhan Murugan</name>
+      <email>aravindhan.murugan@capitalone.com</email>
       <organization>CapitalOne</organization>
       <organizationUrl>http://www.capitalone.com</organizationUrl>
     </developer>
@@ -135,15 +121,72 @@
       <groupId>com.capitalone.dashboard</groupId>
       <artifactId>core</artifactId>
       <version>${com.capitalone.dashboard.core.version}</version>
+      <classifier>embed</classifier>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
+      <version>2.5.13</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>2.23.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.6.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <version>5.5.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>1.2.10</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.10</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-mongodb</artifactId>
+      <version>3.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.32</version>
     </dependency>
   </dependencies>
 
@@ -178,6 +221,17 @@
           <source>${java.compilation.source}</source>
           <target>${java.compilation.target}</target>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.sonatype.plexus</groupId>
+            <artifactId>plexus-cipher</artifactId>
+            <version>1.4</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -278,6 +332,23 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit4</artifactId>
+            <version>2.22.0</version>
+          </dependency>
+          <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.7.2</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -680,3 +751,4 @@
   </profiles>
 
 </project>
+

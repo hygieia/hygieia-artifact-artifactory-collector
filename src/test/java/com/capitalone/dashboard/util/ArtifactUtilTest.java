@@ -6,12 +6,14 @@ import static org.junit.Assert.assertNotNull;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.runner.RunWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.capitalone.dashboard.model.BinaryArtifact;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith({MockitoExtension.class})
 public class ArtifactUtilTest {
     public static final String IVY_PATTERN1 = "(?<group>.+)/(?<module>[^/]+)/(?<version>[^/]+)/(?<artifact>ivy)-\\k<version>(-(?<classifier>[^\\.]+))?\\.(?<ext>xml)";
     public static final String IVY_ARTIFACT_PATTERN1 = "(?<group>.+)/(?<module>[^/]+)/(?<version>[^/]+)/(?<type>[^/]+)/(?<artifact>[^\\.-/]+)-\\k<version>(-(?<classifier>[^\\.]+))?(\\.(?<ext>.+))?";
@@ -188,7 +190,7 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals(null, ba.getArtifactExtension());
 
-        path = "maven-publicfacing/@dummy/my-dummy-helper-util";
+        path = "maven-publicfacing/@placeholder/my-placeholder-helper-util";
 
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
@@ -196,7 +198,7 @@ public class ArtifactUtilTest {
         assertEquals("maven-publicfacing", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals(null, ba.getArtifactVersion());
-        assertEquals("my-dummy-helper-util", ba.getArtifactName());
+        assertEquals("my-placeholder-helper-util", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals(null, ba.getArtifactExtension());
     }
@@ -313,7 +315,7 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("nupkg", ba.getArtifactExtension());
 
-        path = "dummyArtifactName.5.14.5506.26202.nupkg";
+        path = "placeholderArtifactName.5.14.5506.26202.nupkg";
 
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
@@ -321,7 +323,7 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("5.14.5506.26202", ba.getArtifactVersion());
-        assertEquals("dummyArtifactName", ba.getArtifactName());
+        assertEquals("placeholderArtifactName", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("nupkg", ba.getArtifactExtension());
     }
@@ -341,26 +343,26 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("tar.gz", ba.getArtifactExtension());
 
-        path = "dummyGroup/2c/2b/33af741a5f53307691382d3bd5ba45fee3da21658f0bdf1f016d70ac3fb0/dummyArtifactName-1.11.0-my36-classifier-1_2_3.whl";
+        path = "placeholderGroup/2c/2b/33af741a5f53307691382d3bd5ba45fee3da21658f0bdf1f016d70ac3fb0/placeholderArtifactName-1.11.0-my36-classifier-1_2_3.whl";
 
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummyGroup", ba.getArtifactGroupId());
+        assertEquals("placeholderGroup", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("1.11.0", ba.getArtifactVersion());
-        assertEquals("dummyArtifactName", ba.getArtifactName());
+        assertEquals("placeholderArtifactName", ba.getArtifactName());
         assertEquals("my36-classifier-1_2_3", ba.getArtifactClassifier());
         assertEquals("whl", ba.getArtifactExtension());
 
-        path = "dummyGroup/dummyApp/1.0.3/dummyApp-1.0.3.tar.gz";
+        path = "placeholderGroup/placeholderApp/1.0.3/placeholderApp-1.0.3.tar.gz";
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummyGroup", ba.getArtifactGroupId());
+        assertEquals("placeholderGroup", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("1.0.3", ba.getArtifactVersion());
-        assertEquals("dummyApp", ba.getArtifactName());
+        assertEquals("placeholderApp", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("tar.gz", ba.getArtifactExtension());
 
@@ -368,15 +370,15 @@ public class ArtifactUtilTest {
     @Test
     public void testPypiPub1() {
         String patternStr = PIPY_PUB_PATTERN;
-        String path = "dummyGrp/dummyApp/0.0.2/dummyApp-0.0.2.zip";
+        String path = "placeholderGrp/placeholderApp/0.0.2/placeholderApp-0.0.2.zip";
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
 
         assertNotNull(ba);
-        assertEquals("dummyGrp", ba.getArtifactGroupId());
+        assertEquals("placeholderGrp", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("0.0.2", ba.getArtifactVersion());
-        assertEquals("dummyApp", ba.getArtifactName());
+        assertEquals("placeholderApp", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("zip", ba.getArtifactExtension());
     }
@@ -384,15 +386,15 @@ public class ArtifactUtilTest {
     @Test
     public void testPypiInt() {
         String patternStr = PIPY_INT_PATTERN;
-        String path = "dummyGrp/dummyArtifact.py";
+        String path = "placeholderGrp/placeholderArtifact.py";
 
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummyGrp", ba.getArtifactGroupId());
+        assertEquals("placeholderGrp", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals(null, ba.getArtifactVersion());
-        assertEquals("dummyArtifact", ba.getArtifactName());
+        assertEquals("placeholderArtifact", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("py", ba.getArtifactExtension());
     }
@@ -400,7 +402,7 @@ public class ArtifactUtilTest {
     @Test
     public void testPypiInt1() {
         String patternStr = PIPY_PATTERN;
-        String path = "pypi-internalfacing/00/0e/5a8c34adb97fc1cd6636d78050e575945e874c8516d501421d5a0f377a6c/dummyArtifact-1.15.4-my37-n-sys_w86.whl";
+        String path = "pypi-internalfacing/00/0e/5a8c34adb97fc1cd6636d78050e575945e874c8516d501421d5a0f377a6c/placeholderArtifact-1.15.4-my37-n-sys_w86.whl";
 
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
@@ -408,7 +410,7 @@ public class ArtifactUtilTest {
         assertEquals("pypi-internalfacing", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("1.15.4", ba.getArtifactVersion());
-        assertEquals("dummyArtifact", ba.getArtifactName());
+        assertEquals("placeholderArtifact", ba.getArtifactName());
         assertEquals("my37-n-sys_w86", ba.getArtifactClassifier());
         assertEquals("whl", ba.getArtifactExtension());
     }
@@ -416,7 +418,7 @@ public class ArtifactUtilTest {
     @Test
     public void testRemote() {
         String patternStr = REMOTEKEYS_PATTERN;
-        String path = "remote-repository-keys/dummy-rpm.key";
+        String path = "remote-repository-keys/placeholder-rpm.key";
 
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
@@ -424,26 +426,26 @@ public class ArtifactUtilTest {
         assertEquals("remote-repository-keys", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals(null, ba.getArtifactVersion());
-        assertEquals("dummy-rpm", ba.getArtifactName());
+        assertEquals("placeholder-rpm", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("key", ba.getArtifactExtension());
 
-        path = "dummyGrp/my-d-artifact.key";
+        path = "placeholderGrp/my-d-artifact.key";
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummyGrp", ba.getArtifactGroupId());
+        assertEquals("placeholderGrp", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals(null, ba.getArtifactVersion());
         assertEquals("my-d-artifact", ba.getArtifactName());
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("key", ba.getArtifactExtension());
 
-        path = "dummyGrp/my.dc.org.key";
+        path = "placeholderGrp/my.dc.org.key";
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummyGrp", ba.getArtifactGroupId());
+        assertEquals("placeholderGrp", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals(null, ba.getArtifactVersion());
         assertEquals("my.dc.org", ba.getArtifactName());
@@ -598,7 +600,7 @@ public class ArtifactUtilTest {
     @Test
     public void testSbtPub2() {
         String patternStr = SBT_PUB_PATTERN2;
-        String path = "sbt-publicfacing/com.github.sbt/dummy/scala_2.12/sbt_1.0/3.2.0/jars/dummy.jar.asc.md5.asc";
+        String path = "sbt-publicfacing/com.github.sbt/placeholder/scala_2.12/sbt_1.0/3.2.0/jars/placeholder.jar.asc.md5.asc";
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
@@ -609,7 +611,7 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("jar.asc.md5.asc", ba.getArtifactExtension());
 
-        path = "sbt-publicfacing/com.dummy/dummy-sbt-community-settings/scala_2.10/sbt_0.13/3.12.0/abcd/dummy-sbt-community-settings-sources.jar";
+        path = "sbt-publicfacing/com.placeholder/placeholder-sbt-community-settings/scala_2.10/sbt_0.13/3.12.0/abcd/placeholder-sbt-community-settings-sources.jar";
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
@@ -620,7 +622,7 @@ public class ArtifactUtilTest {
         assertEquals(null, ba.getArtifactClassifier());
         assertEquals("jar", ba.getArtifactExtension());
 
-        path = "sbt-publicfacing/com.dummy/my-app_2.12/scala_2.12/sbt_1.0/0.2.0/jars/";
+        path = "sbt-publicfacing/com.placeholder/my-app_2.12/scala_2.12/sbt_1.0/0.2.0/jars/";
         pattern = Pattern.compile(patternStr);
         ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
@@ -1206,12 +1208,12 @@ public class ArtifactUtilTest {
     @Test
     public void testArtifactPattern() {
         String patternStr = ARTIFACT_PATTERN;
-        String path = "dummy/test-dev/1/manifest.json";
+        String path = "placeholder/test-dev/1/manifest.json";
 
         Pattern pattern = Pattern.compile(patternStr);
         BinaryArtifact ba = ArtifactUtil.parse(pattern, path);
         assertNotNull(ba);
-        assertEquals("dummy", ba.getArtifactGroupId());
+        assertEquals("placeholder", ba.getArtifactGroupId());
         assertEquals(null, ba.getArtifactModule());
         assertEquals("1", ba.getArtifactVersion());
         assertEquals("test-dev", ba.getArtifactName());

@@ -2,7 +2,7 @@
   "results": [
     {
       "repo": "repoName",
-      "path": "dummy/test-dev/1",
+      "path": "placeholder/test-dev/1",
       "name": "manifest.json",
       "type": "file",
       "artifactVersion" : "1",
@@ -24,7 +24,7 @@
     },
     {
       "repo": "repoName",
-      "path": "dummy/test-dev/1",
+      "path": "placeholder/test-dev/1",
       "name": "manifest.json",
       "type": "file",
       "artifactVersion" : "1",
@@ -55,7 +55,7 @@
     },
     {
       "repo": "repoName",
-      "path": "dummy/test-dev/1",
+      "path": "placeholder/test-dev/1",
       "name": "manifest.json",
       "type": "file",
       "artifactVersion" : "1",

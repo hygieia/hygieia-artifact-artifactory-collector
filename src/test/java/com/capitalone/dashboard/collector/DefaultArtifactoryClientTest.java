@@ -139,9 +139,9 @@ public class DefaultArtifactoryClientTest {
 		assertThat(baseArtifacts.get(0).getArtifactItem().getArtifactName(),is("test-dev"));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getInstanceUrl(),is("http://localhost:8081/artifactory/"));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getRepoName(),is("repoName"));
-		assertThat(baseArtifacts.get(0).getArtifactItem().getPath(),is("dummy/test-dev"));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getPath(),is("placeholder/test-dev"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCanonicalName(),is("manifest.json"));
-		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactGroupId(),is("dummy"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactGroupId(),is("placeholder"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f3"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f3"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactExtension(),is("json"));
@@ -194,9 +194,9 @@ public class DefaultArtifactoryClientTest {
 		assertThat(baseArtifacts.get(0).getArtifactItem().getArtifactName(),is("test-dev"));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getInstanceUrl(),is("http://localhost:8081/artifactory/"));
 		assertThat(baseArtifacts.get(0).getArtifactItem().getRepoName(),is("repoName"));
-		assertThat(baseArtifacts.get(0).getArtifactItem().getPath(),is("dummy/test-dev"));
+		assertThat(baseArtifacts.get(0).getArtifactItem().getPath(),is("placeholder/test-dev"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getCanonicalName(),is("manifest.json"));
-		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactGroupId(),is("dummy"));
+		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactGroupId(),is("placeholder"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f3"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f3"));
 		assertThat(baseArtifacts.get(0).getBinaryArtifacts().get(0).getArtifactExtension(),is("json"));
@@ -232,7 +232,7 @@ public class DefaultArtifactoryClientTest {
 
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(null);
 		// binary artifact found with matching collector item id
-		when(binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(id, new Sort(Sort.Direction.DESC, "timestamp"))).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
+		when(binaryArtifactRepository.findTopByCollectorItemIdAndBuildInfosIsNotEmptyOrderByTimestampDesc(id, Sort.by(Sort.Direction.DESC, "timestamp"))).thenReturn(binaryArtifactLatestCollectorItemId(id, true));
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(0));
 	}
@@ -254,13 +254,13 @@ public class DefaultArtifactoryClientTest {
 		when(rest.exchange(eq(aqlUrl), eq(HttpMethod.POST), Matchers.any(HttpEntity.class), eq(String.class)))
 				.thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
-		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "dummy/test-dev/1", repoName, true);
+		BinaryArtifact matchedBA = createMatchedExistingBinaryArtifact(id, "test-dev", "1", "placeholder/test-dev/1", repoName, true);
 		when(binaryArtifactRepository.findTopByCollectorItemIdAndArtifactVersionOrderByTimestampDesc(id, "1")).thenReturn(matchedBA);
 		List<BinaryArtifact> binaryArtifacts = defaultArtifactoryClient.getArtifacts(ai, patterns);
 		assertThat(binaryArtifacts.size(), is(1));
 		assertThat(binaryArtifacts.get(0).getArtifactName(),is("test-dev"));
 		assertThat(binaryArtifacts.get(0).getCanonicalName(),is("manifest.json"));
-		assertThat(binaryArtifacts.get(0).getArtifactGroupId(),is("dummy"));
+		assertThat(binaryArtifacts.get(0).getArtifactGroupId(),is("placeholder"));
 		assertThat(binaryArtifacts.get(0).getActual_md5(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
 		assertThat(binaryArtifacts.get(0).getActual_sha1(),is("111aadc11ed11b1111df111d16d6c8d821112f1"));
 		assertThat(binaryArtifacts.get(0).getArtifactExtension(),is("json"));
@@ -301,7 +301,7 @@ public class DefaultArtifactoryClientTest {
 		String aqlUrl = "http://localhost:8081/artifactory/api/search/aql";
 		String repoName = "release";
 		Map<String, String> fieldsToUpdate = new HashMap<>();
-		fieldsToUpdate.put("path", "dummy/test-dev");
+		fieldsToUpdate.put("path", "placeholder/test-dev");
 		String response = updateJsonArtifactFields("binaryArtifacts.json", fieldsToUpdate);
 		ObjectId id = ObjectId.get();
 		// artifact item
@@ -561,7 +561,7 @@ public class DefaultArtifactoryClientTest {
     	a.setArtifactName(artifactName);
     	a.setInstanceUrl(instanceUrl);
     	a.setRepoName(repoName);
-    	a.setPath("dummy/test-dev/1");
+    	a.setPath("placeholder/test-dev/1");
     	a.setId(id);
 
     	return a;
