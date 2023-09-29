@@ -1,3 +1,4 @@
+# Due to changes in the priorities, this project is currently not being supported. The project is archived as of 6/1/2023 and will be available in a read-only state. Please note, since archival, the project is not maintained or reviewed
 src## Hygieia Artifact Collector for Jfrog Artifactory
 
 [![Build Status](https://travis-ci.com/Hygieia/hygieia-artifact-artifactory-collector.svg?branch=master)](https://travis-ci.com/Hygieia/hygieia-artifact-artifactory-collector)
